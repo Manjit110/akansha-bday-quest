@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './humanoid.js';
 import { createFaceOverlay } from './faceOverlay.js';
 import { player as playerConfig } from '../data/player.js';
+import { assetUrl } from '../assetPath.js';
 
 const W = 960;
 const H = 540;
@@ -38,7 +39,7 @@ export default class BossScene extends Phaser.Scene {
 
   preload() {
     if (playerConfig.facePhoto && !this.textures.exists('face-player')) {
-      this.load.image('face-player', playerConfig.facePhoto);
+      this.load.image('face-player', assetUrl(playerConfig.facePhoto));
     }
   }
 
@@ -56,7 +57,7 @@ export default class BossScene extends Phaser.Scene {
 
     ensureHeroTexture(this);
     this.player = this.physics.add.sprite(120, GROUND_Y - 100, 'hero-idle');
-    this.player.body.setSize(22, 46).setOffset(7, 6);
+    this.player.body.setSize(22, 46).setOffset(7, 20);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
 

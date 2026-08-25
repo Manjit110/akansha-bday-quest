@@ -12,6 +12,7 @@ import {
 } from './humanoid.js';
 import { createFaceOverlay } from './faceOverlay.js';
 import { player as playerConfig } from '../data/player.js';
+import { assetUrl } from '../assetPath.js';
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -37,10 +38,10 @@ export default class LevelScene extends Phaser.Scene {
 
   preload() {
     if (playerConfig.facePhoto && !this.textures.exists('face-player')) {
-      this.load.image('face-player', playerConfig.facePhoto);
+      this.load.image('face-player', assetUrl(playerConfig.facePhoto));
     }
     if (this.friend?.photoSolo) {
-      this.load.image(`face-friend-${this.friend.id}`, this.friend.photoSolo);
+      this.load.image(`face-friend-${this.friend.id}`, assetUrl(this.friend.photoSolo));
     }
   }
 
@@ -88,7 +89,7 @@ export default class LevelScene extends Phaser.Scene {
     // --- player ---
     ensureHeroTexture(this);
     this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, 'hero-idle');
-    this.player.body.setSize(22, 46).setOffset(7, 6);
+    this.player.body.setSize(22, 46).setOffset(7, 20);
     this.player.body.setBounce(0);
     this.player.body.setMaxVelocity(260, 900);
 

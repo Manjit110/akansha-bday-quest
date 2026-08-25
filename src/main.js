@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import './style.css';
 import { friends, finaleNote } from './data/friends.js';
+import { assetUrl } from './assetPath.js';
 import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
 
@@ -73,7 +74,7 @@ function renderMap() {
       node.classList.add('done');
       if (friend.photoSolo) {
         const img = document.createElement('img');
-        img.src = friend.photoSolo;
+        img.src = assetUrl(friend.photoSolo);
         img.alt = friend.name;
         node.appendChild(img);
       } else {
@@ -199,7 +200,7 @@ function showReveal(index) {
   // banner: photo of the two of them together, or a soft gradient placeholder
   revealBanner.innerHTML = '';
   if (friend.photoTogether) {
-    revealBanner.style.backgroundImage = `url("${friend.photoTogether}")`;
+    revealBanner.style.backgroundImage = `url("${assetUrl(friend.photoTogether)}")`;
   } else {
     revealBanner.style.backgroundImage = '';
     const icon = document.createElement('div');
@@ -210,9 +211,9 @@ function showReveal(index) {
 
   // avatar: their solo photo, or a colored initial
   revealAvatar.textContent = '';
+  revealAvatar.style.background = '';
   if (friend.photoSolo) {
-    revealAvatar.style.backgroundImage = `url("${friend.photoSolo}")`;
-    revealAvatar.style.background = '';
+    revealAvatar.style.backgroundImage = `url("${assetUrl(friend.photoSolo)}")`;
   } else {
     revealAvatar.style.backgroundImage = 'none';
     revealAvatar.style.background = friend.color;
@@ -256,7 +257,7 @@ function showFinale() {
     node.className = 'map-node done';
     if (friend.photoSolo) {
       const img = document.createElement('img');
-      img.src = friend.photoSolo;
+      img.src = assetUrl(friend.photoSolo);
       img.alt = friend.name;
       node.appendChild(img);
     } else {

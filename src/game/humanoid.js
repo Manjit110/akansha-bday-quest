@@ -1,35 +1,52 @@
-// Draws small humanoid placeholder sprites (head + torso + arms + legs) onto
-// the scene's texture manager, with a simple 2-frame walk cycle, so the
-// player/enemies read as little people rather than flat boxes. Pure
-// Graphics-drawn, no image assets needed.
+// Draws small humanoid placeholder sprites (head + torso + arms + legs,
+// optionally a party hat) onto the scene's texture manager, with a simple
+// 2-frame walk cycle, so the player/enemies read as little people rather
+// than flat boxes. Pure Graphics-drawn, no image assets needed.
 
-export const HERO_SIZE = { width: 36, height: 54 };
-export const IMP_SIZE = { width: 30, height: 42 };
-export const NPC_SIZE = { width: 34, height: 50 };
+// topMargin is extra headroom above the head circle -- small for characters
+// with no hat, larger for hat-wearing ones so the hat has room to sit above
+// the head instead of getting clipped by the texture edge.
+export const HERO_SIZE = { width: 36, height: 68, topMargin: 16 };
+export const IMP_SIZE = { width: 30, height: 42, topMargin: 2 };
+export const NPC_SIZE = { width: 34, height: 64, topMargin: 16 };
 
 // Matches the head circle drawFigure() draws, so a photo overlay can be
 // positioned/sized to sit exactly on top of it.
 export function headGeometry(size) {
   const headR = size.width * 0.3;
-  const headCy = headR + 2;
+  const headCy = headR + size.topMargin;
   return { radius: headR - 1, offsetY: headCy - size.height / 2 };
 }
 
-function drawFigure(g, { w, h, skin, torso, armColor, legColor, step, angry }) {
+function drawPartyHat(g, cx, headCy, headR) {
+  const baseY = headCy - headR * 0.55;
+  const apexX = cx + headR * 0.15;
+  const apexY = headCy - headR * 1.9;
+  g.fillStyle(0xff8fab, 1);
+  g.fillTriangle(cx - headR * 0.8, baseY, cx + headR * 0.85, baseY, apexX, apexY);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(cx - headR * 0.2, baseY - headR * 0.4, headR * 0.12);
+  g.fillCircle(cx + headR * 0.15, baseY - headR * 0.8, headR * 0.1);
+  g.fillStyle(0xffd166, 1);
+  g.fillCircle(apexX, apexY, headR * 0.22);
+}
+
+function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat }) {
+  const { width: w, height: h, topMargin } = size;
   const cx = w / 2;
   const headR = w * 0.3;
-  const headCy = headR + 2;
+  const headCy = headR + topMargin;
   const torsoTop = headCy + headR - 2;
-  const torsoH = h * 0.38;
+  const torsoH = h * 0.32;
   const torsoW = w * 0.5;
   const torsoBottom = torsoTop + torsoH;
   const armW = w * 0.2;
-  const armH = h * 0.32;
+  const armH = h * 0.27;
   const legW = w * 0.24;
   const legH = h - torsoBottom - 2;
 
   // step swings limbs in opposite pairs: -1 / 0 / 1
-  const swing = step * (h * 0.06);
+  const swing = step * (h * 0.05);
 
   // back arm + leg first so the front pair overlaps them
   g.fillStyle(armColor, 1);
@@ -60,6 +77,8 @@ function drawFigure(g, { w, h, skin, torso, armColor, legColor, step, angry }) {
     g.fillCircle(cx - headR * 0.35, headCy - headR * 0.05, Math.max(1.2, w * 0.045));
     g.fillCircle(cx + headR * 0.35, headCy - headR * 0.05, Math.max(1.2, w * 0.045));
   }
+
+  if (hat) drawPartyHat(g, cx, headCy, headR);
 }
 
 function buildWalkFrames(scene, baseKey, size, colors) {
@@ -69,7 +88,7 @@ function buildWalkFrames(scene, baseKey, size, colors) {
     if (scene.textures.exists(key)) return;
     const g = scene.add.graphics();
     const step = i === 0 ? 0 : i === 1 ? 1 : -1;
-    drawFigure(g, { w, h, step, ...colors });
+    drawFigure(g, size, { step, ...colors });
     g.generateTexture(key, w, h);
     g.destroy();
   });
@@ -82,6 +101,7 @@ export function ensureHeroTexture(scene, baseKey = 'hero') {
     armColor: 0xffd9a0,
     legColor: 0x3a86ff,
     angry: false,
+    hat: true,
   });
 }
 
@@ -92,6 +112,7 @@ export function ensureImpTexture(scene, baseKey = 'imp') {
     armColor: 0xff8f8f,
     legColor: 0x9d0208,
     angry: true,
+    hat: false,
   });
 }
 
@@ -104,6 +125,7 @@ export function ensureNpcTexture(scene, baseKey, torsoColor) {
     armColor: 0xffd9a0,
     legColor: 0x5a4a7a,
     angry: false,
+    hat: true,
   });
 }
 
