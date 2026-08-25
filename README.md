@@ -32,7 +32,12 @@ npm run dev
 - **Add photos**: drop images in [public/friends/](public/friends/) and
   point `photoTogether` / `photoSolo` at them, e.g.
   `photoTogether: '/friends/priya-together.jpg'`. Leave either `null` to
-  fall back to a colored placeholder/initial.
+  fall back to a colored placeholder/initial. `photoSolo` also becomes
+  that friend's face in-game (see below), so it pulls double duty.
+- **Akansha's own photo**: [src/data/player.js](src/data/player.js) —
+  set `facePhoto` to a solo photo of her and it becomes the face of the
+  character you control for the whole game. Leave `null` to keep the
+  drawn placeholder face.
 - **Finale message**: `finaleNote` at the bottom of
   [src/data/friends.js](src/data/friends.js) — one closing message shown
   after the dragon fight.
@@ -41,11 +46,13 @@ npm run dev
   list, so the level count always matches however many friends are in
   the array — no separate level design needed if you add or remove
   someone.
-- **Visuals**: everything is flat colored shapes right now (no sprite
-  art) — intentional placeholder art so the game is playable
-  immediately. Swap in real sprites later in
-  [src/game/LevelScene.js](src/game/LevelScene.js) /
-  [BossScene.js](src/game/BossScene.js) if you want a different look.
+- **Visuals**: player/enemies/the friend waiting at each level's end are
+  small procedurally-drawn humanoid figures (see
+  [src/game/humanoid.js](src/game/humanoid.js)) — no image assets
+  needed. Any friend with a `photoSolo` automatically gets their real
+  face circle-cropped onto that figure instead of the drawn one
+  ([src/game/faceOverlay.js](src/game/faceOverlay.js)); square-ish
+  photos work best since they're fit into a circle.
 
 ## Deploy to GitHub Pages
 

@@ -5,6 +5,15 @@
 
 export const HERO_SIZE = { width: 36, height: 54 };
 export const IMP_SIZE = { width: 30, height: 42 };
+export const NPC_SIZE = { width: 34, height: 50 };
+
+// Matches the head circle drawFigure() draws, so a photo overlay can be
+// positioned/sized to sit exactly on top of it.
+export function headGeometry(size) {
+  const headR = size.width * 0.3;
+  const headCy = headR + 2;
+  return { radius: headR - 1, offsetY: headCy - size.height / 2 };
+}
 
 function drawFigure(g, { w, h, skin, torso, armColor, legColor, step, angry }) {
   const cx = w / 2;
@@ -83,6 +92,18 @@ export function ensureImpTexture(scene, baseKey = 'imp') {
     armColor: 0xff8f8f,
     legColor: 0x9d0208,
     angry: true,
+  });
+}
+
+// The friend waiting at the end of a level. Torso is tinted with that
+// friend's own color for quick per-level visual variety.
+export function ensureNpcTexture(scene, baseKey, torsoColor) {
+  buildWalkFrames(scene, baseKey, NPC_SIZE, {
+    skin: 0xffd9a0,
+    torso: torsoColor,
+    armColor: 0xffd9a0,
+    legColor: 0x5a4a7a,
+    angry: false,
   });
 }
 

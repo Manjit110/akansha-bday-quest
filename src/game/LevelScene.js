@@ -1,13 +1,22 @@
 import Phaser from 'phaser';
 import { generateLevel } from './levelConfig.js';
-import { ensureHeroTexture, ensureImpTexture, animateHumanoid, IMP_SIZE } from './humanoid.js';
+import {
+  ensureHeroTexture,
+  ensureImpTexture,
+  ensureNpcTexture,
+  animateHumanoid,
+  headGeometry,
+  HERO_SIZE,
+  IMP_SIZE,
+  NPC_SIZE,
+} from './humanoid.js';
+import { createFaceOverlay } from './faceOverlay.js';
+import { player as playerConfig } from '../data/player.js';
 
 const PALETTE = {
   ground: 0x4a3570,
   groundTop: 0x6a4fa0,
   platform: 0x3a2a5c,
-  flagPole: 0xc9b8e8,
-  flagCloth: 0x7fe7d6,
   bgHill1: 0x2d1b56,
   bgHill2: 0x35205f,
 };
@@ -24,6 +33,15 @@ export default class LevelScene extends Phaser.Scene {
     this.totalLevels = data.totalLevels;
     this.hearts = 3;
     this.invulnerable = false;
+  }
+
+  preload() {
+    if (playerConfig.facePhoto && !this.textures.exists('face-player')) {
+      this.load.image('face-player', playerConfig.facePhoto);
+    }
+    if (this.friend?.photoSolo) {
+      this.load.image(`face-friend-${this.friend.id}`, this.friend.photoSolo);
+    }
   }
 
   create() {
@@ -53,15 +71,18 @@ export default class LevelScene extends Phaser.Scene {
       this.platformGroup.add(rect);
     });
 
-    // --- flag / goal ---
-    const pole = this.add.rectangle(cfg.flagX, cfg.groundY - 70, 6, 140, PALETTE.flagPole);
-    const cloth = this.add.triangle(
-      cfg.flagX + 3, cfg.groundY - 130,
-      0, 0, 34, 10, 0, 20,
-      PALETTE.flagCloth
-    );
-    this.tweens.add({ targets: cloth, x: cfg.flagX + 6, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.flag = this.add.rectangle(cfg.flagX, cfg.groundY - 70, 20, 140, 0x000000, 0);
+    // --- goal: the friend waiting at the end of the level ---
+    const friendKey = `npc-${this.friend.id}`;
+    const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    ensureNpcTexture(this, friendKey, friendColor);
+    this.friendNpc = this.add.sprite(cfg.flagX, cfg.groundY - NPC_SIZE.height / 2, `${friendKey}-idle`);
+    this.tweens.add({ targets: this.friendNpc, y: '-=6', duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    const npcHead = headGeometry(NPC_SIZE);
+    this.friendFace = createFaceOverlay(this, { textureKey: `face-friend-${this.friend.id}`, radius: npcHead.radius });
+    this.friendFaceOffsetY = npcHead.offsetY;
+
+    this.flag = this.add.zone(cfg.flagX, cfg.groundY - NPC_SIZE.height / 2, NPC_SIZE.width, NPC_SIZE.height);
     this.physics.add.existing(this.flag, true);
 
     // --- player ---
@@ -70,6 +91,10 @@ export default class LevelScene extends Phaser.Scene {
     this.player.body.setSize(22, 46).setOffset(7, 6);
     this.player.body.setBounce(0);
     this.player.body.setMaxVelocity(260, 900);
+
+    const heroHead = headGeometry(HERO_SIZE);
+    this.playerFace = createFaceOverlay(this, { textureKey: 'face-player', radius: heroHead.radius });
+    this.playerFaceOffsetY = heroHead.offsetY;
 
     // --- enemies ---
     ensureImpTexture(this);
@@ -175,6 +200,12 @@ export default class LevelScene extends Phaser.Scene {
     if (!jumpKey) this.jumpLock = false;
 
     animateHumanoid(player, { onGround, time, baseKey: 'hero' });
+    if (this.playerFace) {
+      this.playerFace.setPosition(player.x, player.y + this.playerFaceOffsetY * player.scaleY);
+    }
+    if (this.friendFace) {
+      this.friendFace.setPosition(this.friendNpc.x, this.friendNpc.y + this.friendFaceOffsetY);
+    }
 
     // fell into a pit
     if (player.y > this.cfg.groundY + 300) {

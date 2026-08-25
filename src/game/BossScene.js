@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
-import { ensureHeroTexture, animateHumanoid } from './humanoid.js';
+import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './humanoid.js';
+import { createFaceOverlay } from './faceOverlay.js';
+import { player as playerConfig } from '../data/player.js';
 
 const W = 960;
 const H = 540;
@@ -34,6 +36,12 @@ export default class BossScene extends Phaser.Scene {
     this.finished = false;
   }
 
+  preload() {
+    if (playerConfig.facePhoto && !this.textures.exists('face-player')) {
+      this.load.image('face-player', playerConfig.facePhoto);
+    }
+  }
+
   create() {
     this.cameras.main.setBackgroundColor('#1a1035');
     this.physics.world.setBounds(0, 0, W, H + 300);
@@ -51,6 +59,10 @@ export default class BossScene extends Phaser.Scene {
     this.player.body.setSize(22, 46).setOffset(7, 6);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
+
+    const heroHead = headGeometry(HERO_SIZE);
+    this.playerFace = createFaceOverlay(this, { textureKey: 'face-player', radius: heroHead.radius });
+    this.playerFaceOffsetY = heroHead.offsetY;
 
     // dragon (simple composite: body + belly + weak point)
     this.dragon = this.add.rectangle(DRAGON_X, DRAGON_HIGH_Y, 130, 90, PALETTE.dragonBody);
@@ -198,5 +210,8 @@ export default class BossScene extends Phaser.Scene {
     if (!jumpKey) this.jumpLock = false;
 
     animateHumanoid(player, { onGround, time, baseKey: 'hero' });
+    if (this.playerFace) {
+      this.playerFace.setPosition(player.x, player.y + this.playerFaceOffsetY * player.scaleY);
+    }
   }
 }
