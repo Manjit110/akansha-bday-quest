@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <title>A Quest for Akansha</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%89%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- TITLE SCREEN -->
+    <section id="screen-title" class="screen active">
+      <div class="stars"></div>
+      <h1 class="pixel-title">A Quest for<br />Akansha</h1>
+      <p class="subtitle">A dragon has taken her birthday hostage.<br />Only her friends can save it.</p>
+      <button class="btn-primary" id="btn-start">Begin the Journey</button>
+      <p class="hint">Arrow keys / WASD to move &middot; Space to jump</p>
+    </section>
+
+    <!-- MAP SCREEN -->
+    <section id="screen-map" class="screen">
+      <h2 class="pixel-title small">The Journey</h2>
+      <p class="subtitle small">Rescue every friend, then face the dragon.</p>
+      <div id="map-path"></div>
+      <div id="boss-node-wrap"></div>
+    </section>
+
+    <!-- GAME (Phaser mounts here) -->
+    <section id="screen-game" class="screen">
+      <div id="game-hud">
+        <button class="btn-small" id="btn-quit-level">&larr; Map</button>
+        <div id="boss-hp"></div>
+        <div id="hearts"></div>
+      </div>
+      <div id="game-container"></div>
+    </section>
+
+    <!-- FRIEND REVEAL SCREEN -->
+    <section id="screen-reveal" class="screen">
+      <div class="reveal-card">
+        <div class="reveal-photo" id="reveal-photo"></div>
+        <h2 id="reveal-name" class="reveal-name"></h2>
+        <p id="reveal-message" class="reveal-message"></p>
+        <div class="reveal-memory">
+          <span class="memory-label">a memory, just for you</span>
+          <p id="reveal-memory-text"></p>
+        </div>
+        <button class="btn-primary" id="btn-reveal-continue">Continue the Journey</button>
+      </div>
+    </section>
+
+    <!-- FINALE SCREEN -->
+    <section id="screen-finale" class="screen">
+      <div id="confetti-layer"></div>
+      <h1 class="pixel-title">Happy Birthday<br />Akansha!</h1>
+      <p class="subtitle">Every friend you rescued came together to say...</p>
+      <div id="finale-grid"></div>
+      <p id="finale-note" class="finale-note"></p>
+    </section>
+
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
