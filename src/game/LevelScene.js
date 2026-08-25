@@ -66,8 +66,8 @@ export default class LevelScene extends Phaser.Scene {
 
     // --- player ---
     ensureHeroTexture(this);
-    this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, 'hero');
-    this.player.body.setSize(20, 40).setOffset(5, 6);
+    this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, 'hero-idle');
+    this.player.body.setSize(22, 46).setOffset(7, 6);
     this.player.body.setBounce(0);
     this.player.body.setMaxVelocity(260, 900);
 
@@ -75,9 +75,9 @@ export default class LevelScene extends Phaser.Scene {
     ensureImpTexture(this);
     this.enemyGroup = this.physics.add.group({ allowGravity: false, immovable: false });
     cfg.enemies.forEach((e) => {
-      const enemy = this.physics.add.sprite(e.x, cfg.groundY - IMP_SIZE.height / 2, 'imp');
+      const enemy = this.physics.add.sprite(e.x, cfg.groundY - IMP_SIZE.height / 2, 'imp-idle');
       enemy.body.setAllowGravity(false);
-      enemy.body.setSize(18, 28).setOffset(4, 5);
+      enemy.body.setSize(20, 34).setOffset(5, 6);
       enemy.startX = e.x - e.range / 2;
       enemy.endX = e.x + e.range / 2;
       enemy.body.setVelocityX(e.speed);
@@ -174,7 +174,7 @@ export default class LevelScene extends Phaser.Scene {
     }
     if (!jumpKey) this.jumpLock = false;
 
-    animateHumanoid(player, { onGround, time });
+    animateHumanoid(player, { onGround, time, baseKey: 'hero' });
 
     // fell into a pit
     if (player.y > this.cfg.groundY + 300) {
@@ -186,7 +186,7 @@ export default class LevelScene extends Phaser.Scene {
       if (!enemy.active) return;
       if (enemy.x <= enemy.startX) enemy.body.setVelocityX(Math.abs(enemy.body.velocity.x));
       if (enemy.x >= enemy.endX) enemy.body.setVelocityX(-Math.abs(enemy.body.velocity.x));
-      animateHumanoid(enemy, { onGround: true, time });
+      animateHumanoid(enemy, { onGround: true, time, baseKey: 'imp' });
     });
   }
 }

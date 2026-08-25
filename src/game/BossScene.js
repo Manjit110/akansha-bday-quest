@@ -47,8 +47,8 @@ export default class BossScene extends Phaser.Scene {
     this.physics.add.existing(ground, true);
 
     ensureHeroTexture(this);
-    this.player = this.physics.add.sprite(120, GROUND_Y - 100, 'hero');
-    this.player.body.setSize(20, 40).setOffset(5, 6);
+    this.player = this.physics.add.sprite(120, GROUND_Y - 100, 'hero-idle');
+    this.player.body.setSize(22, 46).setOffset(7, 6);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
 
@@ -197,6 +197,6 @@ export default class BossScene extends Phaser.Scene {
     }
     if (!jumpKey) this.jumpLock = false;
 
-    animateHumanoid(player, { onGround, time });
+    animateHumanoid(player, { onGround, time, baseKey: 'hero' });
   }
 }
