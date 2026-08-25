@@ -31,10 +31,14 @@ const bossNodeWrap = document.getElementById('boss-node-wrap');
 const heartsEl = document.getElementById('hearts');
 const bossHpEl = document.getElementById('boss-hp');
 const btnQuit = document.getElementById('btn-quit-level');
-const revealPhoto = document.getElementById('reveal-photo');
+const revealBanner = document.getElementById('reveal-banner');
+const revealAvatar = document.getElementById('reveal-avatar');
 const revealName = document.getElementById('reveal-name');
 const revealMessage = document.getElementById('reveal-message');
-const revealMemoryText = document.getElementById('reveal-memory-text');
+const revealFirstMet = document.getElementById('reveal-first-met');
+const revealFirstImpression = document.getElementById('reveal-first-impression');
+const revealNowImpression = document.getElementById('reveal-now-impression');
+const revealQuality = document.getElementById('reveal-quality');
 const btnRevealContinue = document.getElementById('btn-reveal-continue');
 const finaleGrid = document.getElementById('finale-grid');
 const finaleNoteEl = document.getElementById('finale-note');
@@ -67,9 +71,9 @@ function renderMap() {
     node.className = 'map-node';
     if (i < state.unlocked) {
       node.classList.add('done');
-      if (friend.photo) {
+      if (friend.photoSolo) {
         const img = document.createElement('img');
-        img.src = friend.photo;
+        img.src = friend.photoSolo;
         img.alt = friend.name;
         node.appendChild(img);
       } else {
@@ -191,19 +195,37 @@ btnQuit.addEventListener('click', () => {
 // --- reveal screen ---
 function showReveal(index) {
   const friend = friends[index];
-  revealPhoto.innerHTML = '';
-  revealPhoto.style.background = friend.photo ? 'transparent' : friend.color;
-  if (friend.photo) {
-    const img = document.createElement('img');
-    img.src = friend.photo;
-    img.alt = friend.name;
-    revealPhoto.appendChild(img);
+
+  // banner: photo of the two of them together, or a soft gradient placeholder
+  revealBanner.innerHTML = '';
+  if (friend.photoTogether) {
+    revealBanner.style.backgroundImage = `url("${friend.photoTogether}")`;
   } else {
-    revealPhoto.textContent = friend.name.trim().charAt(0).toUpperCase() || '?';
+    revealBanner.style.backgroundImage = '';
+    const icon = document.createElement('div');
+    icon.className = 'banner-placeholder-icon';
+    icon.innerHTML = '🖼️<span>photo coming soon</span>';
+    revealBanner.appendChild(icon);
   }
+
+  // avatar: their solo photo, or a colored initial
+  revealAvatar.textContent = '';
+  if (friend.photoSolo) {
+    revealAvatar.style.backgroundImage = `url("${friend.photoSolo}")`;
+    revealAvatar.style.background = '';
+  } else {
+    revealAvatar.style.backgroundImage = 'none';
+    revealAvatar.style.background = friend.color;
+    revealAvatar.textContent = friend.name.trim().charAt(0).toUpperCase() || '?';
+  }
+  revealBanner.appendChild(revealAvatar);
+
   revealName.textContent = friend.name;
   revealMessage.textContent = friend.message;
-  revealMemoryText.textContent = friend.memory;
+  revealFirstMet.textContent = friend.firstMet;
+  revealFirstImpression.textContent = friend.firstImpression;
+  revealNowImpression.textContent = friend.nowImpression;
+  revealQuality.textContent = friend.quality;
   showScreen('screen-reveal');
 }
 
@@ -232,9 +254,9 @@ function showFinale() {
   friends.forEach((friend) => {
     const node = document.createElement('div');
     node.className = 'map-node done';
-    if (friend.photo) {
+    if (friend.photoSolo) {
       const img = document.createElement('img');
-      img.src = friend.photo;
+      img.src = friend.photoSolo;
       img.alt = friend.name;
       node.appendChild(img);
     } else {

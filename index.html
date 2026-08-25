@@ -43,14 +43,32 @@
     <!-- FRIEND REVEAL SCREEN -->
     <section id="screen-reveal" class="screen">
       <div class="reveal-card">
-        <div class="reveal-photo" id="reveal-photo"></div>
-        <h2 id="reveal-name" class="reveal-name"></h2>
-        <p id="reveal-message" class="reveal-message"></p>
-        <div class="reveal-memory">
-          <span class="memory-label">a memory, just for you</span>
-          <p id="reveal-memory-text"></p>
+        <div class="reveal-banner" id="reveal-banner">
+          <div class="reveal-avatar" id="reveal-avatar"></div>
         </div>
-        <button class="btn-primary" id="btn-reveal-continue">Continue the Journey</button>
+        <div class="reveal-body">
+          <h2 id="reveal-name" class="reveal-name"></h2>
+          <p id="reveal-message" class="reveal-message"></p>
+          <div class="reveal-qa">
+            <div class="qa-row">
+              <span class="qa-emoji">🤝</span>
+              <div class="qa-text"><span class="qa-label">Where they met</span><p id="reveal-first-met"></p></div>
+            </div>
+            <div class="qa-row">
+              <span class="qa-emoji">👀</span>
+              <div class="qa-text"><span class="qa-label">First impression</span><p id="reveal-first-impression"></p></div>
+            </div>
+            <div class="qa-row">
+              <span class="qa-emoji">😂</span>
+              <div class="qa-text"><span class="qa-label">Impression now</span><p id="reveal-now-impression"></p></div>
+            </div>
+            <div class="qa-row">
+              <span class="qa-emoji">❤️</span>
+              <div class="qa-text"><span class="qa-label">What they love about her</span><p id="reveal-quality"></p></div>
+            </div>
+          </div>
+          <button class="btn-primary" id="btn-reveal-continue">Continue the Journey</button>
+        </div>
       </div>
     </section>
 

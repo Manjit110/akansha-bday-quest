@@ -1,10 +1,11 @@
 # A Quest for Akansha 🐉
 
-A small birthday platformer. She plays through 16 short levels — one per
-friend — and clearing each one "rescues" that friend, revealing their
-photo, a birthday message, and a shared memory/inside joke. The last
-level is a dragon boss fight; beating it opens a celebration screen with
-everyone together.
+A small birthday platformer. She plays through one short level per
+friend, and clearing each one "rescues" that friend, revealing a photo
+of the two of them, their solo photo, a birthday message, and a bit of
+their story with her (where they met, first impression, impression now,
+a quality they love about her). The last level is a dragon boss fight;
+beating it opens a celebration screen with everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming and plain
 HTML/CSS for the title, map, friend-reveal, and finale screens. Fully
@@ -21,12 +22,17 @@ npm run dev
 ## Before sending her the link
 
 - **Fill in the friends**: [src/data/friends.js](src/data/friends.js) —
-  16 entries, one per level, each with a `name`, `message`, `memory`
-  (inside joke), and optional `photo`. Reorder the array to change the
+  one entry per level, each with `name`, `message`, `firstMet`,
+  `firstImpression`, `nowImpression`, `quality`, and two optional
+  photos. Matches what's being collected from each friend: a photo of
+  them + Akansha together, a solo photo, a birthday message, where they
+  first met her, their first impression, their impression now, and a
+  quality they appreciate about her. Reorder the array to change the
   level order.
 - **Add photos**: drop images in [public/friends/](public/friends/) and
-  point `photo` at them, e.g. `photo: '/friends/priya.jpg'`. Leave
-  `photo: null` to fall back to a colored initial avatar.
+  point `photoTogether` / `photoSolo` at them, e.g.
+  `photoTogether: '/friends/priya-together.jpg'`. Leave either `null` to
+  fall back to a colored placeholder/initial.
 - **Finale message**: `finaleNote` at the bottom of
   [src/data/friends.js](src/data/friends.js) — one closing message shown
   after the dragon fight.

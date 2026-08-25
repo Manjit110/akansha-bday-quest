@@ -1,32 +1,51 @@
-// One entry per level. Fill these in with the real people before launch:
-//   name    -> their name (shown on the reveal card)
-//   photo   -> path to their photo, e.g. "/friends/priya.jpg" (put the file in /public/friends/)
-//              leave null to fall back to a colored initial avatar
-//   color   -> placeholder avatar color, used until a photo is added
-//   message -> the birthday message they'd want to give Akansha
-//   memory  -> a short shared memory / inside joke, just between them and her
+// One entry per level. Fill these in as each friend sends their submission:
+//   name           -> their name (shown on the reveal card)
+//   photoTogether  -> path to a photo of them + Akansha together, e.g. "/friends/priya-together.jpg"
+//   photoSolo      -> path to a solo photo of them, e.g. "/friends/priya-solo.jpg"
+//                     (used for the map avatar; leave either photo null to fall back to a colored initial avatar)
+//   color          -> placeholder avatar color, used until photos are added
+//   message        -> their birthday message to Akansha
+//   firstMet       -> where they first met her
+//   firstImpression -> their first impression of her
+//   nowImpression  -> their impression of her now (can be brutally honest / funny)
+//   quality        -> one quality they really like/appreciate about her
 //
 // Order = level order. Rearrange freely; the game just walks the array in order.
 
 export const friends = [
-  { id: 1, name: 'Arpit', photo: null, color: '#ff8fab', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 2, name: 'Pulkit (Husband)', photo: null, color: '#ffd166', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 3, name: 'Ritika', photo: null, color: '#7fe7d6', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 4, name: 'Abhishek', photo: null, color: '#c77dff', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 5, name: 'Karan', photo: null, color: '#ff9770', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 6, name: 'Bhumi', photo: null, color: '#8ecae6', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 7, name: 'Mahak', photo: null, color: '#f4a261', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 8, name: 'Abhishek Loblaws', photo: null, color: '#b5e48c', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 9, name: 'Rashika', photo: null, color: '#ffafcc', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 10, name: 'Adi', photo: null, color: '#a0c4ff', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 11, name: 'Nitpreet', photo: null, color: '#ffc6ff', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 12, name: 'Zalak', photo: null, color: '#caffbf', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 13, name: 'Piyush', photo: null, color: '#fdffb6', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 14, name: 'Sara', photo: null, color: '#9bf6ff', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 15, name: 'Manish', photo: null, color: '#bdb2ff', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 16, name: 'Manjit', photo: null, color: '#ff99c8', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
-  { id: 17, name: 'Disha', photo: null, color: '#ffd6a5', message: 'TODO: their birthday message.', memory: 'TODO: a memory or inside joke.' },
+  mkFriend(1, 'Arpit', '#ff8fab'),
+  mkFriend(2, 'Pulkit (Husband)', '#ffd166'),
+  mkFriend(3, 'Ritika', '#7fe7d6'),
+  mkFriend(4, 'Abhishek', '#c77dff'),
+  mkFriend(5, 'Karan', '#ff9770'),
+  mkFriend(6, 'Bhumi', '#8ecae6'),
+  mkFriend(7, 'Mahak', '#f4a261'),
+  mkFriend(8, 'Abhishek Loblaws', '#b5e48c'),
+  mkFriend(9, 'Rashika', '#ffafcc'),
+  mkFriend(10, 'Adi', '#a0c4ff'),
+  mkFriend(11, 'Nitpreet', '#ffc6ff'),
+  mkFriend(12, 'Zalak', '#caffbf'),
+  mkFriend(13, 'Piyush', '#fdffb6'),
+  mkFriend(14, 'Sara', '#9bf6ff'),
+  mkFriend(15, 'Manish', '#bdb2ff'),
+  mkFriend(16, 'Manjit', '#ff99c8'),
+  mkFriend(17, 'Disha', '#ffd6a5'),
 ];
+
+function mkFriend(id, name, color) {
+  return {
+    id,
+    name,
+    photoTogether: null,
+    photoSolo: null,
+    color,
+    message: 'TODO: their birthday message.',
+    firstMet: 'TODO: where they first met Akansha.',
+    firstImpression: 'TODO: first impression of her.',
+    nowImpression: 'TODO: impression of her now.',
+    quality: 'TODO: a quality they appreciate about her.',
+  };
+}
 
 // Shown on the finale screen once the dragon is beaten.
 export const finaleNote =
