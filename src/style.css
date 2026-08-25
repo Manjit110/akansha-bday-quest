@@ -222,11 +222,33 @@ html, body {
   border-radius: 24px;
   max-width: 440px;
   width: 100%;
+  max-height: min(88vh, 680px);
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   border: 2px solid rgba(255,255,255,0.08);
   overflow: hidden;
   text-align: left;
   margin: 20px 0;
+}
+
+.reveal-scroll {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.reveal-footer {
+  flex-shrink: 0;
+  padding: 16px 26px 22px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: var(--card-bg);
+}
+
+.reveal-footer .btn-primary {
+  display: block;
+  width: 100%;
+  margin: 0;
 }
 
 .reveal-banner {
@@ -341,10 +363,6 @@ html, body {
   line-height: 1.5;
 }
 
-.reveal-body .btn-primary {
-  display: block;
-  margin: 0 auto;
-}
 
 /* --- finale screen --- */
 #finale-grid {

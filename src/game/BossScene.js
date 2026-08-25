@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ensureHeroTexture, animateHumanoid } from './humanoid.js';
 
 const W = 960;
 const H = 540;
@@ -7,7 +8,6 @@ const GROUND_Y = 460;
 const PALETTE = {
   ground: 0x4a3570,
   groundTop: 0x6a4fa0,
-  player: 0xffd166,
   dragonBody: 0x8a1f3d,
   dragonBelly: 0xc23b5e,
   weakSafe: 0x5a2a45,
@@ -46,9 +46,9 @@ export default class BossScene extends Phaser.Scene {
     this.add.rectangle(W / 2, GROUND_Y, W, 8, PALETTE.groundTop);
     this.physics.add.existing(ground, true);
 
-    this.player = this.add.rectangle(120, GROUND_Y - 100, 26, 40, PALETTE.player);
-    this.player.setStrokeStyle(2, 0xffffff, 0.4);
-    this.physics.add.existing(this.player);
+    ensureHeroTexture(this);
+    this.player = this.physics.add.sprite(120, GROUND_Y - 100, 'hero');
+    this.player.body.setSize(20, 40).setOffset(5, 6);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
 
@@ -179,7 +179,7 @@ export default class BossScene extends Phaser.Scene {
     });
   }
 
-  update() {
+  update(time) {
     if (this.finished) return;
     const { cursors, keys, player } = this;
     const left = cursors.left.isDown || keys.A.isDown;
@@ -196,5 +196,7 @@ export default class BossScene extends Phaser.Scene {
       this.jumpLock = true;
     }
     if (!jumpKey) this.jumpLock = false;
+
+    animateHumanoid(player, { onGround, time });
   }
 }

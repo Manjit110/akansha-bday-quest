@@ -1,12 +1,11 @@
 import Phaser from 'phaser';
 import { generateLevel } from './levelConfig.js';
+import { ensureHeroTexture, ensureImpTexture, animateHumanoid, IMP_SIZE } from './humanoid.js';
 
 const PALETTE = {
   ground: 0x4a3570,
   groundTop: 0x6a4fa0,
   platform: 0x3a2a5c,
-  player: 0xffd166,
-  enemy: 0xff6b6b,
   flagPole: 0xc9b8e8,
   flagCloth: 0x7fe7d6,
   bgHill1: 0x2d1b56,
@@ -66,18 +65,19 @@ export default class LevelScene extends Phaser.Scene {
     this.physics.add.existing(this.flag, true);
 
     // --- player ---
-    this.player = this.add.rectangle(cfg.spawnX, cfg.groundY - 100, 26, 40, PALETTE.player);
-    this.player.setStrokeStyle(2, 0xffffff, 0.4);
-    this.physics.add.existing(this.player);
+    ensureHeroTexture(this);
+    this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, 'hero');
+    this.player.body.setSize(20, 40).setOffset(5, 6);
     this.player.body.setBounce(0);
     this.player.body.setMaxVelocity(260, 900);
 
     // --- enemies ---
+    ensureImpTexture(this);
     this.enemyGroup = this.physics.add.group({ allowGravity: false, immovable: false });
     cfg.enemies.forEach((e) => {
-      const enemy = this.add.rectangle(e.x, cfg.groundY - 14, 26, 26, PALETTE.enemy);
-      this.physics.add.existing(enemy);
+      const enemy = this.physics.add.sprite(e.x, cfg.groundY - IMP_SIZE.height / 2, 'imp');
       enemy.body.setAllowGravity(false);
+      enemy.body.setSize(18, 28).setOffset(4, 5);
       enemy.startX = e.x - e.range / 2;
       enemy.endX = e.x + e.range / 2;
       enemy.body.setVelocityX(e.speed);
@@ -156,7 +156,7 @@ export default class LevelScene extends Phaser.Scene {
     this.callbacks.onComplete(this.levelIndex);
   }
 
-  update() {
+  update(time) {
     if (this.completed) return;
     const { cursors, keys, player } = this;
     const left = cursors.left.isDown || keys.A.isDown;
@@ -174,6 +174,8 @@ export default class LevelScene extends Phaser.Scene {
     }
     if (!jumpKey) this.jumpLock = false;
 
+    animateHumanoid(player, { onGround, time });
+
     // fell into a pit
     if (player.y > this.cfg.groundY + 300) {
       this.damagePlayer();
@@ -184,6 +186,7 @@ export default class LevelScene extends Phaser.Scene {
       if (!enemy.active) return;
       if (enemy.x <= enemy.startX) enemy.body.setVelocityX(Math.abs(enemy.body.velocity.x));
       if (enemy.x >= enemy.endX) enemy.body.setVelocityX(-Math.abs(enemy.body.velocity.x));
+      animateHumanoid(enemy, { onGround: true, time });
     });
   }
 }
