@@ -30,6 +30,8 @@ export const friends = [
   mkFriend(15, 'Manish', '#bdb2ff'),
   mkFriend(16, 'Manjit', '#ff99c8'),
   mkFriend(17, 'Disha', '#ffd6a5'),
+  mkFriend(18, 'Gurseerut', '#72efdd'),
+  mkFriend(19, 'Jyotirmay', '#ffb4a2'),
 ];
 
 function mkFriend(id, name, color) {
