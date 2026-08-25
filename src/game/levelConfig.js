@@ -2,6 +2,12 @@ import { mulberry32 } from './rng.js';
 
 export const GROUND_Y = 460;
 
+// The player's jump (velocity 560, gravity 1400) only reaches ~112px above
+// its takeoff point. Any platform placed higher than that is physically
+// unreachable -- so every platform height below must stay under this, with
+// margin for imprecise human timing.
+const MAX_JUMP_HEIGHT = 112;
+
 // Procedurally lays out one level. `levelIndex` is 0-based, `total` is the
 // friend count, so difficulty ramps smoothly from the first level to the last.
 export function generateLevel(levelIndex, total) {
@@ -27,11 +33,12 @@ export function generateLevel(levelIndex, total) {
     let gap = 0;
     if (rand() < gapChance) {
       gap = 70 + rand() * maxGap;
-      // A floating platform helps bridge wider gaps.
+      // A floating platform helps bridge wider gaps -- must stay reachable
+      // from ground level (well under MAX_JUMP_HEIGHT).
       if (gap > 110) {
         platforms.push({
           x: x + gap / 2,
-          y: GROUND_Y - 90 - rand() * 60,
+          y: GROUND_Y - 55 - rand() * 35,
           width: 90,
         });
       }
@@ -45,7 +52,7 @@ export function generateLevel(levelIndex, total) {
   const bonusPlatforms = 1 + Math.floor(difficulty * 3);
   for (let i = 0; i < bonusPlatforms; i++) {
     const px = SAFE_START + 200 + rand() * (width - SAFE_START - SAFE_END - 400);
-    platforms.push({ x: px, y: GROUND_Y - 130 - rand() * 70, width: 110 });
+    platforms.push({ x: px, y: GROUND_Y - 60 - rand() * 45, width: 110 });
   }
 
   // Enemies, placed on solid ground segments away from the very start/end
