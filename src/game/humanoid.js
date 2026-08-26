@@ -8,7 +8,6 @@
 // the head instead of getting clipped by the texture edge.
 export const HERO_SIZE = { width: 36, height: 68, topMargin: 16 };
 export const IMP_SIZE = { width: 30, height: 42, topMargin: 2 };
-export const NPC_SIZE = { width: 34, height: 64, topMargin: 16 };
 
 // Matches the head circle drawFigure() draws, so a photo overlay can be
 // positioned/sized to sit exactly on top of it.
@@ -113,19 +112,6 @@ export function ensureImpTexture(scene, baseKey = 'imp') {
     legColor: 0x9d0208,
     angry: true,
     hat: false,
-  });
-}
-
-// The friend waiting at the end of a level. Torso is tinted with that
-// friend's own color for quick per-level visual variety.
-export function ensureNpcTexture(scene, baseKey, torsoColor) {
-  buildWalkFrames(scene, baseKey, NPC_SIZE, {
-    skin: 0xffd9a0,
-    torso: torsoColor,
-    armColor: 0xffd9a0,
-    legColor: 0x5a4a7a,
-    angry: false,
-    hat: true,
   });
 }
 

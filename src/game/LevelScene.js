@@ -1,17 +1,8 @@
 import Phaser from 'phaser';
 import { generateLevel } from './levelConfig.js';
-import {
-  ensureHeroTexture,
-  ensureImpTexture,
-  ensureNpcTexture,
-  animateHumanoid,
-  headGeometry,
-  HERO_SIZE,
-  IMP_SIZE,
-  NPC_SIZE,
-} from './humanoid.js';
+import { ensureHeroTexture, ensureImpTexture, animateHumanoid, headGeometry, HERO_SIZE, IMP_SIZE } from './humanoid.js';
+import { ensureAnimalTexture, ANIMAL_TYPES, ANIMAL_SIZE } from './animals.js';
 import { createFaceOverlay } from './faceOverlay.js';
-import { player as playerConfig } from '../data/player.js';
 import { assetUrl } from '../assetPath.js';
 
 const PALETTE = {
@@ -21,6 +12,10 @@ const PALETTE = {
   bgHill1: 0x2d1b56,
   bgHill2: 0x35205f,
 };
+
+// The face shown on the player is enlarged relative to the drawn head, so
+// it reads clearly at this small sprite scale (and just looks fun/chibi).
+const PLAYER_FACE_SCALE = 1.8;
 
 export default class LevelScene extends Phaser.Scene {
   constructor() {
@@ -37,9 +32,6 @@ export default class LevelScene extends Phaser.Scene {
   }
 
   preload() {
-    if (playerConfig.facePhoto && !this.textures.exists('face-player')) {
-      this.load.image('face-player', assetUrl(playerConfig.facePhoto));
-    }
     if (this.friend?.photoSolo) {
       this.load.image(`face-friend-${this.friend.id}`, assetUrl(this.friend.photoSolo));
     }
@@ -72,21 +64,10 @@ export default class LevelScene extends Phaser.Scene {
       this.platformGroup.add(rect);
     });
 
-    // --- goal: the friend waiting at the end of the level ---
-    const friendKey = `npc-${this.friend.id}`;
-    const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
-    ensureNpcTexture(this, friendKey, friendColor);
-    this.friendNpc = this.add.sprite(cfg.flagX, cfg.groundY - NPC_SIZE.height / 2, `${friendKey}-idle`);
-    this.tweens.add({ targets: this.friendNpc, y: '-=6', duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // --- goal: a glowing portal to that friend, replacing the old flag ---
+    this.createPortal(cfg);
 
-    const npcHead = headGeometry(NPC_SIZE);
-    this.friendFace = createFaceOverlay(this, { textureKey: `face-friend-${this.friend.id}`, radius: npcHead.radius });
-    this.friendFaceOffsetY = npcHead.offsetY;
-
-    this.flag = this.add.zone(cfg.flagX, cfg.groundY - NPC_SIZE.height / 2, NPC_SIZE.width, NPC_SIZE.height);
-    this.physics.add.existing(this.flag, true);
-
-    // --- player ---
+    // --- player: wears this level's friend's face while you play their level ---
     ensureHeroTexture(this);
     this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, 'hero-idle');
     this.player.body.setSize(22, 46).setOffset(7, 20);
@@ -94,10 +75,13 @@ export default class LevelScene extends Phaser.Scene {
     this.player.body.setMaxVelocity(260, 900);
 
     const heroHead = headGeometry(HERO_SIZE);
-    this.playerFace = createFaceOverlay(this, { textureKey: 'face-player', radius: heroHead.radius });
+    this.playerFace = createFaceOverlay(this, {
+      textureKey: `face-friend-${this.friend.id}`,
+      radius: heroHead.radius * PLAYER_FACE_SCALE,
+    });
     this.playerFaceOffsetY = heroHead.offsetY;
 
-    // --- enemies ---
+    // --- enemies: regular patrol enemies, plus an animal guardian near the goal ---
     ensureImpTexture(this);
     this.enemyGroup = this.physics.add.group({ allowGravity: false, immovable: false });
     cfg.enemies.forEach((e) => {
@@ -107,8 +91,10 @@ export default class LevelScene extends Phaser.Scene {
       enemy.startX = e.x - e.range / 2;
       enemy.endX = e.x + e.range / 2;
       enemy.body.setVelocityX(e.speed);
+      enemy.baseKeyName = 'imp';
       this.enemyGroup.add(enemy);
     });
+    this.spawnGuardian(cfg);
 
     // --- collisions ---
     this.physics.add.collider(this.player, this.groundGroup);
@@ -125,6 +111,54 @@ export default class LevelScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE');
 
     this.callbacks.onHeartsChange(this.hearts);
+  }
+
+  createPortal(cfg) {
+    const portalX = cfg.flagX;
+    const portalY = cfg.groundY - 70;
+    const radius = 42;
+    const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+
+    const ring = this.add.circle(portalX, portalY, radius, color, 0.25);
+    ring.setStrokeStyle(4, color, 0.9);
+    this.tweens.add({ targets: ring, scale: 1.08, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.circle(portalX, portalY, radius * 0.72, 0x1a1035, 1);
+
+    const faceRadius = radius * 0.62;
+    const face = createFaceOverlay(this, { textureKey: `face-friend-${this.friend.id}`, radius: faceRadius });
+    if (face) {
+      face.setPosition(portalX, portalY);
+    } else {
+      this.add.circle(portalX, portalY, faceRadius, color, 1);
+      this.add
+        .text(portalX, portalY, this.friend.name.trim().charAt(0).toUpperCase() || '?', {
+          fontFamily: 'Quicksand, sans-serif',
+          fontSize: `${Math.round(faceRadius)}px`,
+          fontStyle: '700',
+          color: '#2b1140',
+        })
+        .setOrigin(0.5);
+    }
+
+    this.flag = this.add.zone(portalX, portalY, radius * 2, radius * 2.2);
+    this.physics.add.existing(this.flag, true);
+  }
+
+  spawnGuardian(cfg) {
+    const type = ANIMAL_TYPES[this.levelIndex % ANIMAL_TYPES.length];
+    const baseKey = `animal-${type}`;
+    ensureAnimalTexture(this, type, baseKey);
+
+    const guardX = cfg.flagX - 100;
+    const guardian = this.physics.add.sprite(guardX, cfg.groundY - ANIMAL_SIZE.height / 2, `${baseKey}-idle`);
+    guardian.body.setAllowGravity(false);
+    guardian.body.setSize(ANIMAL_SIZE.width * 0.7, ANIMAL_SIZE.height * 0.7);
+    guardian.body.setOffset(ANIMAL_SIZE.width * 0.15, ANIMAL_SIZE.height * 0.3);
+    guardian.baseKeyName = baseKey;
+    guardian.startX = guardX - 55;
+    guardian.endX = guardX + 55;
+    guardian.body.setVelocityX(70 + this.levelIndex * 3);
+    this.enemyGroup.add(guardian);
   }
 
   drawBackground(cfg) {
@@ -204,9 +238,6 @@ export default class LevelScene extends Phaser.Scene {
     if (this.playerFace) {
       this.playerFace.setPosition(player.x, player.y + this.playerFaceOffsetY * player.scaleY);
     }
-    if (this.friendFace) {
-      this.friendFace.setPosition(this.friendNpc.x, this.friendNpc.y + this.friendFaceOffsetY);
-    }
 
     // fell into a pit
     if (player.y > this.cfg.groundY + 300) {
@@ -218,7 +249,7 @@ export default class LevelScene extends Phaser.Scene {
       if (!enemy.active) return;
       if (enemy.x <= enemy.startX) enemy.body.setVelocityX(Math.abs(enemy.body.velocity.x));
       if (enemy.x >= enemy.endX) enemy.body.setVelocityX(-Math.abs(enemy.body.velocity.x));
-      animateHumanoid(enemy, { onGround: true, time, baseKey: 'imp' });
+      animateHumanoid(enemy, { onGround: true, time, baseKey: enemy.baseKeyName });
     });
   }
 }

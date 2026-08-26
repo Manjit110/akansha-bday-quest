@@ -1,11 +1,14 @@
 # A Quest for Akansha 🐉
 
 A small birthday platformer. She plays through one short level per
-friend, and clearing each one "rescues" that friend, revealing a photo
-of the two of them, their solo photo, a birthday message, and a bit of
-their story with her (where they met, first impression, impression now,
-a quality they love about her). The last level is a dragon boss fight;
-beating it opens a celebration screen with everyone together.
+friend, wearing that friend's own face as she runs and jumps through
+it, dodging a small animal enemy (snake/dog/wolf/lion, cycling by
+level) before reaching a glowing portal with their photo in it.
+Clearing a level "rescues" that friend, revealing a photo of the two of
+them, their solo photo, a birthday message, and a bit of their story
+with her (where they met, first impression, impression now, a quality
+she loves about her). The last level is a dragon boss fight; beating it
+opens a celebration screen with everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming and plain
 HTML/CSS for the title, map, friend-reveal, and finale screens. Fully
@@ -35,9 +38,11 @@ npm run dev
   fall back to a colored placeholder/initial. `photoSolo` also becomes
   that friend's face in-game (see below), so it pulls double duty.
 - **Akansha's own photo**: [src/data/player.js](src/data/player.js) —
-  set `facePhoto` to a solo photo of her and it becomes the face of the
-  character you control for the whole game. Leave `null` to keep the
-  drawn placeholder face.
+  set `facePhoto` to a solo photo of her and it becomes her face during
+  the dragon boss fight (the one level that isn't about a specific
+  friend). Leave `null` to keep the drawn placeholder face. During the
+  regular levels the character you control instead wears *that level's
+  friend's* face.
 - **Finale message**: `finaleNote` at the bottom of
   [src/data/friends.js](src/data/friends.js) — one closing message shown
   after the dragon fight.
@@ -46,13 +51,16 @@ npm run dev
   list, so the level count always matches however many friends are in
   the array — no separate level design needed if you add or remove
   someone.
-- **Visuals**: player/enemies/the friend waiting at each level's end are
-  small procedurally-drawn humanoid figures (see
-  [src/game/humanoid.js](src/game/humanoid.js)) — no image assets
-  needed. Any friend with a `photoSolo` automatically gets their real
-  face circle-cropped onto that figure instead of the drawn one
+- **Visuals**: the player and enemies are small procedurally-drawn
+  humanoid figures ([src/game/humanoid.js](src/game/humanoid.js)) — no
+  image assets needed. Any friend with a `photoSolo` automatically gets
+  their real face circle-cropped onto the player character for that
+  level, enlarged so it's easy to make out at gameplay scale
   ([src/game/faceOverlay.js](src/game/faceOverlay.js)); square-ish
-  photos work best since they're fit into a circle.
+  photos work best since they're fit into a circle. The small animal
+  enemy near each level's end is drawn in
+  [src/game/animals.js](src/game/animals.js) — add more types to
+  `ANIMAL_TYPES` there if you want more variety than snake/dog/wolf/lion.
 
 ## Deploy to GitHub Pages
 
