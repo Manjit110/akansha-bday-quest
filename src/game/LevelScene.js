@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { generateLevel } from './levelConfig.js';
 import { ensureHeroTexture, ensureImpTexture, animateHumanoid, headGeometry, HERO_SIZE, IMP_SIZE } from './humanoid.js';
-import { ensureAnimalTexture, ANIMAL_TYPES, ANIMAL_SIZE } from './animals.js';
+import { ensureAnimalTexture, ANIMAL_TYPES, BOSS_ANIMAL_SIZE } from './animals.js';
 import { createFaceOverlay } from './faceOverlay.js';
 import { assetUrl } from '../assetPath.js';
 
@@ -16,6 +16,8 @@ const PALETTE = {
 // The face shown on the player is enlarged relative to the drawn head, so
 // it reads clearly at this small sprite scale (and just looks fun/chibi).
 const PLAYER_FACE_SCALE = 1.8;
+const SHOOT_COOLDOWN = 380;
+const BOSS_HP = 3;
 
 export default class LevelScene extends Phaser.Scene {
   constructor() {
@@ -29,6 +31,9 @@ export default class LevelScene extends Phaser.Scene {
     this.totalLevels = data.totalLevels;
     this.hearts = 3;
     this.invulnerable = false;
+    this.miniBossDefeated = false;
+    this.lastShotAt = -9999;
+    this.bossHpPips = [];
   }
 
   preload() {
@@ -81,7 +86,11 @@ export default class LevelScene extends Phaser.Scene {
     });
     this.playerFaceOffsetY = heroHead.offsetY;
 
-    // --- enemies: regular patrol enemies, plus an animal guardian near the goal ---
+    // --- projectiles ---
+    this.playerProjectiles = this.physics.add.group({ allowGravity: false });
+    this.bossProjectiles = this.physics.add.group({ allowGravity: false });
+
+    // --- enemies: regular patrol enemies, plus an animal mini-boss guarding the portal ---
     ensureImpTexture(this);
     this.enemyGroup = this.physics.add.group({ allowGravity: false, immovable: false });
     cfg.enemies.forEach((e) => {
@@ -94,13 +103,23 @@ export default class LevelScene extends Phaser.Scene {
       enemy.baseKeyName = 'imp';
       this.enemyGroup.add(enemy);
     });
-    this.spawnGuardian(cfg);
+    this.spawnMiniBoss(cfg);
 
     // --- collisions ---
     this.physics.add.collider(this.player, this.groundGroup);
     this.physics.add.collider(this.player, this.platformGroup);
-    this.physics.add.overlap(this.player, this.flag, () => this.completeLevel());
+    this.physics.add.overlap(this.player, this.flag, () => {
+      if (this.miniBossDefeated) this.completeLevel();
+    });
     this.physics.add.overlap(this.player, this.enemyGroup, (player, enemy) => this.handleEnemyHit(player, enemy));
+    this.physics.add.overlap(this.playerProjectiles, this.enemyGroup, (proj, enemy) => {
+      proj.destroy();
+      this.damageEnemy(enemy);
+    });
+    this.physics.add.overlap(this.player, this.bossProjectiles, (player, fb) => {
+      fb.destroy();
+      if (!this.invulnerable) this.damagePlayer();
+    });
 
     // --- camera ---
     this.cameras.main.setBounds(0, 0, cfg.width, cfg.height);
@@ -108,7 +127,7 @@ export default class LevelScene extends Phaser.Scene {
 
     // --- input ---
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE');
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE,F');
 
     this.callbacks.onHeartsChange(this.hearts);
   }
@@ -144,21 +163,62 @@ export default class LevelScene extends Phaser.Scene {
     this.physics.add.existing(this.flag, true);
   }
 
-  spawnGuardian(cfg) {
+  spawnMiniBoss(cfg) {
     const type = ANIMAL_TYPES[this.levelIndex % ANIMAL_TYPES.length];
-    const baseKey = `animal-${type}`;
-    ensureAnimalTexture(this, type, baseKey);
+    const baseKey = `animal-boss-${type}`;
+    ensureAnimalTexture(this, type, baseKey, BOSS_ANIMAL_SIZE);
 
-    const guardX = cfg.flagX - 100;
-    const guardian = this.physics.add.sprite(guardX, cfg.groundY - ANIMAL_SIZE.height / 2, `${baseKey}-idle`);
+    const guardX = cfg.flagX - 110;
+    const guardian = this.physics.add.sprite(guardX, cfg.groundY - BOSS_ANIMAL_SIZE.height / 2, `${baseKey}-idle`);
     guardian.body.setAllowGravity(false);
-    guardian.body.setSize(ANIMAL_SIZE.width * 0.7, ANIMAL_SIZE.height * 0.7);
-    guardian.body.setOffset(ANIMAL_SIZE.width * 0.15, ANIMAL_SIZE.height * 0.3);
+    guardian.body.setSize(BOSS_ANIMAL_SIZE.width * 0.7, BOSS_ANIMAL_SIZE.height * 0.7);
+    guardian.body.setOffset(BOSS_ANIMAL_SIZE.width * 0.15, BOSS_ANIMAL_SIZE.height * 0.3);
     guardian.baseKeyName = baseKey;
-    guardian.startX = guardX - 55;
-    guardian.endX = guardX + 55;
-    guardian.body.setVelocityX(70 + this.levelIndex * 3);
+    guardian.startX = guardX - 60;
+    guardian.endX = guardX + 60;
+    guardian.body.setVelocityX(60 + this.levelIndex * 2);
+    guardian.isBoss = true;
+    guardian.hp = BOSS_HP;
     this.enemyGroup.add(guardian);
+    this.bossGuardian = guardian;
+
+    this.bossHpPips = [0, 1, 2].map((i) =>
+      this.add.circle(guardX - 14 + i * 14, cfg.groundY - BOSS_ANIMAL_SIZE.height - 14, 5, 0xff5d5d)
+    );
+
+    this.bossThrowTimer = this.time.addEvent({
+      delay: Math.max(1300, 2200 - this.levelIndex * 40),
+      callback: () => this.bossThrow(guardian),
+      loop: true,
+    });
+  }
+
+  bossThrow(guardian) {
+    if (!guardian.active || this.completed) return;
+    const dir = this.player.x < guardian.x ? -1 : 1;
+    const fb = this.add.circle(guardian.x, guardian.y - 4, 7, 0xff6b35);
+    fb.setStrokeStyle(2, 0xffd166, 0.8);
+    this.physics.add.existing(fb);
+    this.bossProjectiles.add(fb);
+    fb.body.setAllowGravity(false);
+    fb.body.setVelocityX(dir * 190);
+    this.time.delayedCall(2600, () => {
+      if (fb.active) fb.destroy();
+    });
+  }
+
+  shoot() {
+    const dir = this.player.flipX ? -1 : 1;
+    const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    const proj = this.add.circle(this.player.x + dir * 18, this.player.y - 4, 6, color);
+    proj.setStrokeStyle(2, 0xffffff, 0.6);
+    this.physics.add.existing(proj);
+    this.playerProjectiles.add(proj);
+    proj.body.setAllowGravity(false);
+    proj.body.setVelocityX(dir * 420);
+    this.time.delayedCall(1000, () => {
+      if (proj.active) proj.destroy();
+    });
   }
 
   drawBackground(cfg) {
@@ -178,11 +238,50 @@ export default class LevelScene extends Phaser.Scene {
     if (this.invulnerable) return;
     const stomped = player.body.velocity.y > 0 && player.y < enemy.y - 6;
     if (stomped) {
-      enemy.destroy();
+      this.damageEnemy(enemy);
       this.player.body.setVelocityY(-360);
     } else {
       this.damagePlayer();
     }
+  }
+
+  damageEnemy(enemy) {
+    if (!enemy.active || enemy.justHit) return;
+    if (enemy.isBoss) {
+      enemy.hp -= 1;
+      enemy.justHit = true;
+      this.time.delayedCall(300, () => {
+        if (enemy.active) enemy.justHit = false;
+      });
+      this.updateBossPips(enemy);
+      this.tweens.add({ targets: enemy, alpha: 0.3, duration: 90, yoyo: true, repeat: 2 });
+      if (enemy.hp <= 0) this.defeatMiniBoss(enemy);
+    } else {
+      enemy.destroy();
+    }
+  }
+
+  updateBossPips(enemy) {
+    this.bossHpPips.forEach((pip, i) => {
+      pip.fillColor = i < enemy.hp ? 0xff5d5d : 0x4a3570;
+    });
+  }
+
+  defeatMiniBoss(enemy) {
+    this.miniBossDefeated = true;
+    if (this.bossThrowTimer) this.bossThrowTimer.remove();
+    enemy.body.enable = false;
+    this.enemyGroup.remove(enemy);
+    this.bossHpPips.forEach((p) => p.destroy());
+    this.bossHpPips = [];
+    this.tweens.add({
+      targets: enemy,
+      alpha: 0,
+      scale: 0.3,
+      duration: 400,
+      ease: 'Back.easeIn',
+      onComplete: () => enemy.destroy(),
+    });
   }
 
   damagePlayer() {
@@ -213,10 +312,18 @@ export default class LevelScene extends Phaser.Scene {
   completeLevel() {
     if (this.completed) return;
     this.completed = true;
-    this.callbacks.onComplete(this.levelIndex);
+    // Deferred to update(): calling the completion callback (which stops this
+    // scene) synchronously from inside a physics overlap callback corrupts
+    // other group-vs-group checks still pending in the same physics step.
+    this.pendingComplete = true;
   }
 
   update(time) {
+    if (this.pendingComplete) {
+      this.pendingComplete = false;
+      this.callbacks.onComplete(this.levelIndex);
+      return;
+    }
     if (this.completed) return;
     const { cursors, keys, player } = this;
     const left = cursors.left.isDown || keys.A.isDown;
@@ -234,6 +341,11 @@ export default class LevelScene extends Phaser.Scene {
     }
     if (!jumpKey) this.jumpLock = false;
 
+    if (keys.F.isDown && time - this.lastShotAt > SHOOT_COOLDOWN) {
+      this.shoot();
+      this.lastShotAt = time;
+    }
+
     animateHumanoid(player, { onGround, time, baseKey: 'hero' });
     if (this.playerFace) {
       this.playerFace.setPosition(player.x, player.y + this.playerFaceOffsetY * player.scaleY);
@@ -242,6 +354,13 @@ export default class LevelScene extends Phaser.Scene {
     // fell into a pit
     if (player.y > this.cfg.groundY + 300) {
       this.damagePlayer();
+    }
+
+    // mini-boss HP pips follow it as it patrols
+    if (this.bossGuardian && this.bossGuardian.active) {
+      this.bossHpPips.forEach((pip, i) => {
+        pip.x = this.bossGuardian.x - 14 + i * 14;
+      });
     }
 
     // enemy patrol turnaround

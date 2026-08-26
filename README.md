@@ -2,12 +2,14 @@
 
 A small birthday platformer. She plays through one short level per
 friend, wearing that friend's own face as she runs and jumps through
-it, dodging a small animal enemy (snake/dog/wolf/lion, cycling by
-level) before reaching a glowing portal with their photo in it.
-Clearing a level "rescues" that friend, revealing a photo of the two of
-them, their solo photo, a birthday message, and a bit of their story
-with her (where they met, first impression, impression now, a quality
-she loves about her). The last level is a dragon boss fight; beating it
+it. Each level ends in a short boss fight against a small mythical
+creature (snake/dog/wolf/lion/griffin/minotaur/yeti/bat, cycling by
+level) that throws fireballs to dodge — she can shoot back (F) or jump
+on it — before a glowing portal with the friend's photo unlocks and
+completing the level rescues them: a photo of the two of them, their
+solo photo, a birthday message, and a bit of their story with her
+(where they met, first impression, impression now, a quality she loves
+about her). The last level is a full dragon boss fight; beating it
 opens a celebration screen with everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming and plain
@@ -57,10 +59,10 @@ npm run dev
   their real face circle-cropped onto the player character for that
   level, enlarged so it's easy to make out at gameplay scale
   ([src/game/faceOverlay.js](src/game/faceOverlay.js)); square-ish
-  photos work best since they're fit into a circle. The small animal
-  enemy near each level's end is drawn in
+  photos work best since they're fit into a circle. The mini-boss
+  creature guarding each level's portal is drawn in
   [src/game/animals.js](src/game/animals.js) — add more types to
-  `ANIMAL_TYPES` there if you want more variety than snake/dog/wolf/lion.
+  `ANIMAL_TYPES` there for more variety than the current eight.
 
 ## Deploy to GitHub Pages
 
