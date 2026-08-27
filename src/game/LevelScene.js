@@ -44,6 +44,15 @@ export default class LevelScene extends Phaser.Scene {
     this.lastShotAt = -9999;
     this.bossHpPips = [];
     this.shootRequested = false;
+    // This scene instance is reused for every level (Phaser keeps one
+    // instance per scene class alive for the game's lifetime rather than
+    // creating a fresh one per scene.start() call), so any flag set while
+    // finishing the previous level has to be explicitly reset here -- these
+    // three used to leak across levels and left her frozen (inputLocked)
+    // the moment the next level loaded.
+    this.enteringFort = false;
+    this.inputLocked = false;
+    this.jumpLock = false;
   }
 
   preload() {
@@ -231,7 +240,7 @@ export default class LevelScene extends Phaser.Scene {
   // fades out through the doorway -- the actual reveal happens in
   // RevealRoomScene, which takes over the whole screen next.
   enterFort() {
-    if (this.enteringFort || this.completed) return;
+    if (this.enteringFort) return;
     this.enteringFort = true;
     this.inputLocked = true;
     this.player.body.setVelocityX(140);
@@ -298,7 +307,7 @@ export default class LevelScene extends Phaser.Scene {
   }
 
   bossThrow(guardian) {
-    if (!guardian.active || this.completed) return;
+    if (!guardian.active || this.enteringFort) return;
     const dir = this.player.x < guardian.x ? -1 : 1;
     const fb = this.add.circle(guardian.x, guardian.y - 4, 7, 0xff6b35);
     fb.setStrokeStyle(2, 0xffd166, 0.8);
@@ -338,21 +347,26 @@ export default class LevelScene extends Phaser.Scene {
     // forest, desert, rolling hills) by index, then that theme's own
     // palette is tinted a little further toward this friend's color -- so
     // levels vary by biome *and* still feel personal, rather than all 19
-    // sharing one backdrop.
+    // sharing one backdrop. Each theme draws its own sky gradient/glow/haze
+    // (see levelThemes.js), so there's no flat background color to set here.
     const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
     const theme = this.theme;
     const palette = {
       layer1: mixColors(theme.layer1, friendColor, 0.2),
       layer2: mixColors(theme.layer2, friendColor, 0.2),
+      skyTop: mixColors(theme.sky, friendColor, 0.1),
+      skyHorizon: mixColors(theme.skyHorizon, friendColor, 0.12),
+      accent: mixColors(theme.stoneLight, friendColor, 0.5),
     };
-    const skyColor = mixColors(theme.sky, friendColor, 0.1);
-    this.cameras.main.setBackgroundColor(skyColor);
 
     theme.draw(this, cfg, palette);
 
     for (let i = 0; i < 24; i++) {
       const star = this.add.circle(Math.random() * cfg.width, Math.random() * (cfg.groundY - 60), 1.6, 0xffffff, 0.6);
       star.setScrollFactor(0.6);
+      if (Math.random() < 0.35) {
+        this.tweens.add({ targets: star, alpha: 0.15, duration: 900 + Math.random() * 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
     }
 
     // Deliberately NOT tinted with friendColor like the sky/hills above --
@@ -442,22 +456,7 @@ export default class LevelScene extends Phaser.Scene {
     });
   }
 
-  completeLevel() {
-    if (this.completed) return;
-    this.completed = true;
-    // Deferred to update(): calling the completion callback (which stops this
-    // scene) synchronously from inside a physics overlap callback corrupts
-    // other group-vs-group checks still pending in the same physics step.
-    this.pendingComplete = true;
-  }
-
   update(time) {
-    if (this.pendingComplete) {
-      this.pendingComplete = false;
-      this.callbacks.onComplete(this.levelIndex);
-      return;
-    }
-    if (this.completed) return;
     const { cursors, keys, player } = this;
 
     if (!this.inputLocked) {

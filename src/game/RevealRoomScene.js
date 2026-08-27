@@ -195,43 +195,70 @@ export default class RevealRoomScene extends Phaser.Scene {
   // A small strip of "tape" straddling the top edge, so the card reads as
   // pinned up rather than a plain UI panel.
   addTape(h, index) {
-    const tape = this.add.rectangle(0, -h / 2, 46, 16, 0xfff2c7, 0.55);
+    const tape = this.add.rectangle(0, -h / 2, 46, 16, 0xfff2c7, 0.6);
     tape.setAngle(index % 2 === 0 ? -7 : 7);
+    tape.setStrokeStyle(1, 0xd8c397, 0.5);
     return tape;
+  }
+
+  // A rounded, paper-like card face with a soft stacked shadow, in place of
+  // a flat sharp-cornered rectangle -- reads as an actual card someone cut
+  // out and pinned up, not a UI dialog box.
+  paperCard(w, h, fillColor, borderColor, radius = 16) {
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.16);
+    g.fillRoundedRect(-w / 2 + 9, -h / 2 + 11, w, h, radius);
+    g.fillStyle(0x000000, 0.1);
+    g.fillRoundedRect(-w / 2 + 4, -h / 2 + 6, w, h, radius);
+    g.fillStyle(fillColor, 1);
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+    g.lineStyle(2, borderColor, 0.85);
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+    // a faint folded corner, like a card that's been handled
+    g.fillStyle(0x000000, 0.06);
+    g.beginPath();
+    g.moveTo(w / 2 - 22, -h / 2);
+    g.lineTo(w / 2, -h / 2);
+    g.lineTo(w / 2, -h / 2 + 22);
+    g.closePath();
+    g.fillPath();
+    return g;
   }
 
   showCard(index) {
     this.cardContainer.removeAll(true);
     const card = this.cards[index];
     const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    const paperColor = mixColors(0xf7ecd6, color, 0.1);
+    const borderColor = mixColors(0xd9c39c, color, 0.35);
 
     if (card.type === 'photo') {
       const size = 176;
-      const shadow = this.add.rectangle(5, 7, size, size, 0x000000, 0.35);
-      const outer = this.add.rectangle(0, 0, size, size, 0xffd166);
-      const inner = this.add.rectangle(0, 0, size - 12, size - 12, 0x1a1035);
+      const frame = this.paperCard(size, size, paperColor, borderColor, 10);
+      const inner = this.add.rectangle(0, -6, size - 24, size - 24, 0x1a1035);
       let photo;
-      const parts = [shadow, outer, inner];
+      const parts = [frame, inner];
       if (card.photoKey && this.textures.exists(card.photoKey)) {
-        photo = this.add.image(0, 0, card.photoKey);
-        photo.setDisplaySize(size - 22, size - 22);
+        photo = this.add.image(0, -6, card.photoKey);
+        photo.setDisplaySize(size - 32, size - 32);
         parts.push(photo);
       } else {
-        photo = this.add.rectangle(0, 0, size - 22, size - 22, color);
+        photo = this.add.rectangle(0, -6, size - 32, size - 32, color);
         const initial = this.add
-          .text(0, 0, this.friend.name.trim().charAt(0).toUpperCase() || '?', {
+          .text(0, -6, this.friend.name.trim().charAt(0).toUpperCase() || '?', {
             fontFamily: 'Press Start 2P, monospace',
-            fontSize: '40px',
+            fontSize: '36px',
             color: '#2b1140',
           })
           .setOrigin(0.5);
         parts.push(photo, initial);
       }
       const label = this.add
-        .text(0, size / 2 + 26, card.label, {
-          fontFamily: 'Press Start 2P, monospace',
-          fontSize: '14px',
-          color: '#ffd166',
+        .text(0, size / 2 - 16, card.label, {
+          fontFamily: 'Caveat, cursive',
+          fontSize: '26px',
+          fontStyle: '700',
+          color: '#5a3d2a',
         })
         .setOrigin(0.5);
       parts.push(label, this.addTape(size, index));
@@ -239,29 +266,29 @@ export default class RevealRoomScene extends Phaser.Scene {
     } else {
       const w = 480;
       const h = 190;
-      const shadow = this.add.rectangle(5, 7, w, h, 0x000000, 0.35);
-      const frame = this.add.rectangle(0, 0, w, h, 0x33215c);
-      frame.setStrokeStyle(4, 0xffd166, 0.9);
-      const iconText = this.add.text(0, -h / 2 + 26, card.icon, { fontSize: '26px' }).setOrigin(0.5);
+      const frame = this.paperCard(w, h, paperColor, borderColor);
+      const sealGlow = this.add.circle(-w / 2 + 42, -h / 2 + 30, 20, color, 0.18);
+      const iconText = this.add.text(-w / 2 + 42, -h / 2 + 30, card.icon, { fontSize: '26px' }).setOrigin(0.5);
       const label = this.add
-        .text(0, -h / 2 + 56, card.label, {
+        .text(-w / 2 + 74, -h / 2 + 30, card.label, {
           fontFamily: 'Quicksand, sans-serif',
           fontSize: '15px',
           fontStyle: '700',
-          color: '#7fe7d6',
+          color: '#7a4a34',
         })
-        .setOrigin(0.5);
+        .setOrigin(0, 0.5);
+      const rule = this.add.rectangle(-w / 2 + 74, -h / 2 + 46, label.width, 2, color, 0.6).setOrigin(0, 0.5);
       const body = this.add
-        .text(0, 16, card.text || '', {
+        .text(0, 22, card.text || '', {
           fontFamily: 'Caveat, cursive',
-          fontSize: '25px',
+          fontSize: '26px',
           fontStyle: '600',
-          color: '#fdf6ff',
+          color: '#3a2a3a',
           align: 'center',
           wordWrap: { width: w - 70 },
         })
         .setOrigin(0.5);
-      this.cardContainer.add([shadow, frame, iconText, label, body, this.addTape(h, index)]);
+      this.cardContainer.add([frame, sealGlow, iconText, label, rule, body, this.addTape(h, index)]);
     }
 
     this.cardContainer.setRotation(Phaser.Math.DegToRad(CARD_ROTATIONS[index % CARD_ROTATIONS.length]));

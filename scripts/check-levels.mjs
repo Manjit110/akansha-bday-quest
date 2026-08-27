@@ -146,6 +146,108 @@ function killProcessTree(proc) {
   }
 }
 
+// Regression test for a real bug: LevelScene is one persistent scene
+// instance reused across every scene.start('LevelScene', ...) call (Phaser
+// keeps one instance per class alive, it doesn't create a fresh one per
+// level), so any flag left set while finishing a level used to leak into
+// the next one. Concretely: inputLocked stayed true after walking through
+// a fort gate, freezing her the moment the next level loaded. This drives
+// the actual finish-a-level path (defeat the boss, walk into the fort,
+// click through the memory room) rather than teleporting past it, then
+// confirms the next level actually responds to input.
+async function checkLevelTransition(page) {
+  console.log('\n== Level-to-level transition (character must not be stuck) ==');
+
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.click('#btn-start');
+  await page.waitForSelector('.map-node.current');
+  await page.click('.map-node.current');
+  await page.waitForSelector('#game-container canvas');
+  await page.waitForTimeout(500);
+
+  // Defeat level 1's mini-boss for real.
+  await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('LevelScene');
+    const boss = scene.bossGuardian;
+    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 100);
+    scene.player.setFlipX(false);
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    return new Promise((resolve) => {
+      const scene = window.__testGame.scene.getScene('LevelScene');
+      const boss = scene.bossGuardian;
+      let shots = 0;
+      function tryShoot() {
+        if (!boss.active || shots >= 6) {
+          resolve();
+          return;
+        }
+        scene.player.setPosition(boss.x - 40, scene.player.y);
+        scene.shoot();
+        shots++;
+        setTimeout(tryShoot, 500);
+      }
+      tryShoot();
+    });
+  });
+  await page.waitForTimeout(300);
+
+  // Walk into the fort for real, not teleport past it, so enterFort()'s
+  // inputLocked/enteringFort flags actually get exercised the way a real
+  // playthrough sets them.
+  await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('LevelScene');
+    scene.player.setPosition(scene.flag.x, scene.flag.y);
+  });
+  await page.waitForTimeout(2200); // fort walk-in pan + fade + RevealRoomScene create
+
+  const roomReached = await page.evaluate(() => {
+    const room = window.__testGame.scene.getScene('RevealRoomScene');
+    return !!(room && room.scene.isActive());
+  });
+  if (!roomReached) {
+    fail('level 1: never reached the memory room after entering the fort');
+    return;
+  }
+
+  // Click through every card to reach onDone -> back to the map.
+  for (let i = 0; i < 8; i++) {
+    const onMap = await page.evaluate(() => document.getElementById('screen-map').classList.contains('active'));
+    if (onMap) break;
+    await page.evaluate(() => {
+      const room = window.__testGame.scene.getScene('RevealRoomScene');
+      if (room && room.scene.isActive()) room.advance();
+    });
+    await page.waitForTimeout(300);
+  }
+  await page.waitForSelector('.map-node.current', { timeout: 5000 });
+
+  // Start the next level and confirm she can actually move.
+  await page.click('.map-node.current');
+  await page.waitForTimeout(500);
+
+  const inputLocked = await page.evaluate(() => window.__testGame.scene.getScene('LevelScene').inputLocked);
+  if (inputLocked) {
+    fail('level 2: inputLocked is still true from the previous level -- character is frozen');
+    return;
+  }
+
+  const startX = await page.evaluate(() => window.__testGame.scene.getScene('LevelScene').player.x);
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(400);
+  await page.keyboard.up('ArrowRight');
+  const endX = await page.evaluate(() => window.__testGame.scene.getScene('LevelScene').player.x);
+
+  if (endX - startX > 15) {
+    pass(`level 2: character moves normally after finishing level 1 (moved ${(endX - startX).toFixed(0)}px)`);
+  } else {
+    fail(`level 2: character did not move (moved ${(endX - startX).toFixed(0)}px) -- looks stuck`);
+  }
+}
+
 async function checkBossFightsAndCompletion(page) {
   console.log('\n== Mini-boss fights (defeatable via the shoot mechanic) ==');
 
@@ -239,6 +341,7 @@ async function main() {
       window.__EXPOSE_GAME_FOR_TESTS__ = true;
     });
 
+    await checkLevelTransition(page);
     await checkBossFightsAndCompletion(page);
 
     if (pageErrors.length) {

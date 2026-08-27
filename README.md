@@ -71,11 +71,16 @@ npm run dev
 - **Level environments**: each level's background is one of five
   themes — hills, mountains, city, night forest, desert — cycling by
   level index ([src/game/levelThemes.js](src/game/levelThemes.js), add
-  more to `LEVEL_THEMES` for more variety than the current five). The
-  fort gate at each level's end is the same structure everywhere
-  (stone-coursed towers, an arched doorway, torches, a friend-colored
-  pennant) but its stone tint comes from the level's theme, so it
-  belongs to its surroundings instead of looking pasted on.
+  more to `LEVEL_THEMES` for more variety than the current five). Each
+  theme paints a real sky gradient (not a flat fill), a glowing moon or
+  sun, drifting clouds, and a soft haze where the terrain meets the
+  horizon, and jitters every hill/peak/building/tree/dune's size and
+  position a little so nothing repeats identically — a flat color with
+  perfectly evenly-spaced shapes is what reads as mechanical rather than
+  like a place. The fort gate at each level's end is the same structure
+  everywhere (stone-coursed towers, an arched doorway, torches, a
+  friend-colored pennant) but its stone tint comes from the level's
+  theme, so it belongs to its surroundings instead of looking pasted on.
 - **The memory room**: [src/game/RevealRoomScene.js](src/game/RevealRoomScene.js)
   — the card order/labels (Birthday Wish, First Impression, etc.) live
   in `buildCards()` there if you want to reorder, rename, or add one.
@@ -83,11 +88,13 @@ npm run dev
   (no need to replay the level) via the same scene. The "together" photo
   at the bottom uses `photoTogether` once you add one; until then it
   shows a placeholder (two colored initials + a heart) so the spot never
-  looks broken. Cards are tilted and taped like something actually
-  pinned up rather than flat UI panels, and the birthday
-  message/impressions render in a handwritten font (Caveat) instead of
-  the game's usual sans-serif, so they read as written rather than
-  printed.
+  looks broken. Cards are rounded, cream-colored paper with a soft
+  layered shadow and a tinted border (not a flat sharp-cornered UI
+  panel), tilted and taped like something actually pinned up, with a
+  small icon, an accent-colored rule under the label, and the birthday
+  message/impressions rendered in dark ink in a handwritten font
+  (Caveat) instead of the game's usual sans-serif on a dark background —
+  closer to an actual handwritten note than a dialog box.
 - **Per-friend color theming**: each level's sky/hills and the memory
   room's backdrop are subtly tinted toward that friend's own `color`
   ([src/game/color.js](src/game/color.js)'s `mixColors`), so nothing
@@ -99,12 +106,16 @@ npm run dev
 ## Testing
 
 `npm test` builds the project, serves it, and drives it with a real
-headless browser to check the two ways a level can quietly become
-unbeatable: bad procedural geometry (a gap or platform that's physically
-out of jump range) and a mini-boss fight that isn't actually winnable.
-Both have happened for real during development — this is meant to run
-after any change that touches level generation, physics, or the boss
-fight, not just once. See
+headless browser to check three ways a level can quietly break: bad
+procedural geometry (a gap or platform that's physically out of jump
+range), a mini-boss fight that isn't actually winnable, and — since
+`LevelScene` is one persistent scene instance Phaser reuses for every
+level rather than a fresh one per level — any state left over from
+finishing one level (like input being locked while she walks into a
+fort) leaking into the next and leaving her stuck. All three have
+happened for real during development — this is meant to run after any
+change that touches level generation, physics, the boss fight, or the
+fort/level-transition flow, not just once. See
 [scripts/check-levels.mjs](scripts/check-levels.mjs).
 
 ## Playing out of order
