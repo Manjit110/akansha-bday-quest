@@ -4,8 +4,9 @@ A small birthday platformer. She plays through one short level per
 friend, wearing that friend's own face as she runs and jumps through
 it. Each level ends in a short boss fight against a small mythical
 creature (snake/dog/wolf/lion/griffin/minotaur/yeti/bat, cycling by
-level) that throws fireballs to dodge — she can shoot back (F) or jump
-on it — before a glowing portal with the friend's photo unlocks and
+level) that throws fireballs to dodge — she wields a little wand and
+can shoot back (F key, or the 🔮 button on screen) or jump on it —
+before a glowing portal with the friend's photo unlocks and
 completing the level rescues them: a photo of the two of them, their
 solo photo, a birthday message, and a bit of their story with her
 (where they met, first impression, impression now, a quality she loves

@@ -32,6 +32,7 @@ const bossNodeWrap = document.getElementById('boss-node-wrap');
 const heartsEl = document.getElementById('hearts');
 const bossHpEl = document.getElementById('boss-hp');
 const btnQuit = document.getElementById('btn-quit-level');
+const btnShoot = document.getElementById('btn-shoot');
 const revealBanner = document.getElementById('reveal-banner');
 const revealAvatar = document.getElementById('reveal-avatar');
 const revealName = document.getElementById('reveal-name');
@@ -142,6 +143,7 @@ function ensureGame() {
 
 function startLevel(index) {
   bossHpEl.style.display = 'none';
+  btnShoot.style.display = 'flex';
   showScreen('screen-game');
   ensureGame();
   renderHearts(3);
@@ -164,6 +166,7 @@ function startLevel(index) {
 
 function startBoss() {
   bossHpEl.style.display = 'flex';
+  btnShoot.style.display = 'none';
   showScreen('screen-game');
   ensureGame();
   renderHearts(3);
@@ -183,6 +186,15 @@ function startBoss() {
     },
   });
 }
+
+btnShoot.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (!game) return;
+  const scene = game.scene.getScene('LevelScene');
+  if (scene && scene.scene.isActive() && typeof scene.requestShoot === 'function') {
+    scene.requestShoot();
+  }
+});
 
 btnQuit.addEventListener('click', () => {
   if (game) {

@@ -3,6 +3,7 @@ import { generateLevel } from './levelConfig.js';
 import { ensureHeroTexture, ensureImpTexture, animateHumanoid, headGeometry, HERO_SIZE, IMP_SIZE } from './humanoid.js';
 import { ensureAnimalTexture, ANIMAL_TYPES, BOSS_ANIMAL_SIZE } from './animals.js';
 import { createFaceOverlay } from './faceOverlay.js';
+import { ensureWandTexture } from './weapon.js';
 import { assetUrl } from '../assetPath.js';
 
 const PALETTE = {
@@ -34,6 +35,7 @@ export default class LevelScene extends Phaser.Scene {
     this.miniBossDefeated = false;
     this.lastShotAt = -9999;
     this.bossHpPips = [];
+    this.shootRequested = false;
   }
 
   preload() {
@@ -85,6 +87,9 @@ export default class LevelScene extends Phaser.Scene {
       radius: heroHead.radius * PLAYER_FACE_SCALE,
     });
     this.playerFaceOffsetY = heroHead.offsetY;
+
+    ensureWandTexture(this);
+    this.wand = this.add.image(this.player.x, this.player.y, 'wand');
 
     // --- projectiles ---
     this.playerProjectiles = this.physics.add.group({ allowGravity: false });
@@ -174,8 +179,10 @@ export default class LevelScene extends Phaser.Scene {
     guardian.body.setSize(BOSS_ANIMAL_SIZE.width * 0.7, BOSS_ANIMAL_SIZE.height * 0.7);
     guardian.body.setOffset(BOSS_ANIMAL_SIZE.width * 0.15, BOSS_ANIMAL_SIZE.height * 0.3);
     guardian.baseKeyName = baseKey;
-    guardian.startX = guardX - 60;
-    guardian.endX = guardX + 60;
+    // Kept inside the guaranteed-solid ground before the portal (see SAFE_END
+    // in levelConfig.js) so the patrol never drifts out over a gap.
+    guardian.startX = guardX - 45;
+    guardian.endX = guardX + 45;
     guardian.body.setVelocityX(60 + this.levelIndex * 2);
     guardian.isBoss = true;
     guardian.hp = BOSS_HP;
@@ -207,10 +214,18 @@ export default class LevelScene extends Phaser.Scene {
     });
   }
 
+  // Called by the on-screen shoot button (see main.js), alongside the F key.
+  requestShoot() {
+    this.shootRequested = true;
+  }
+
   shoot() {
     const dir = this.player.flipX ? -1 : 1;
     const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
-    const proj = this.add.circle(this.player.x + dir * 18, this.player.y - 4, 6, color);
+    // Fired low (near the player's waist, not chest) so it actually lines up
+    // with the short, ground-hugging animal enemies' collision boxes -- a
+    // higher spawn point flew clean over their backs every time.
+    const proj = this.add.circle(this.player.x + dir * 18, this.player.y + 10, 8, color);
     proj.setStrokeStyle(2, 0xffffff, 0.6);
     this.physics.add.existing(proj);
     this.playerProjectiles.add(proj);
@@ -341,12 +356,18 @@ export default class LevelScene extends Phaser.Scene {
     }
     if (!jumpKey) this.jumpLock = false;
 
-    if (keys.F.isDown && time - this.lastShotAt > SHOOT_COOLDOWN) {
+    if ((keys.F.isDown || this.shootRequested) && time - this.lastShotAt > SHOOT_COOLDOWN) {
       this.shoot();
       this.lastShotAt = time;
     }
+    this.shootRequested = false;
 
     animateHumanoid(player, { onGround, time, baseKey: 'hero' });
+    if (this.wand) {
+      const dir = player.flipX ? -1 : 1;
+      this.wand.setPosition(player.x + dir * 14, player.y + 12);
+      this.wand.setFlipX(player.flipX);
+    }
     if (this.playerFace) {
       this.playerFace.setPosition(player.x, player.y + this.playerFaceOffsetY * player.scaleY);
     }
