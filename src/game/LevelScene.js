@@ -42,6 +42,9 @@ export default class LevelScene extends Phaser.Scene {
     if (this.friend?.photoSolo) {
       this.load.image(`face-friend-${this.friend.id}`, assetUrl(this.friend.photoSolo));
     }
+    if (this.friend?.photoTogether) {
+      this.load.image(`together-friend-${this.friend.id}`, assetUrl(this.friend.photoTogether));
+    }
   }
 
   create() {
@@ -71,8 +74,9 @@ export default class LevelScene extends Phaser.Scene {
       this.platformGroup.add(rect);
     });
 
-    // --- goal: a glowing portal to that friend, replacing the old flag ---
-    this.createPortal(cfg);
+    // --- goal: a small fort gate; entering leads to a framed photo on the wall inside ---
+    this.createFortGate(cfg);
+    this.createInteriorWall(cfg);
 
     // --- player: wears this level's friend's face while you play their level ---
     ensureHeroTexture(this);
@@ -95,7 +99,7 @@ export default class LevelScene extends Phaser.Scene {
     this.playerProjectiles = this.physics.add.group({ allowGravity: false });
     this.bossProjectiles = this.physics.add.group({ allowGravity: false });
 
-    // --- enemies: regular patrol enemies, plus an animal mini-boss guarding the portal ---
+    // --- enemies: regular patrol enemies, plus an animal mini-boss guarding the fort gate ---
     ensureImpTexture(this);
     this.enemyGroup = this.physics.add.group({ allowGravity: false, immovable: false });
     cfg.enemies.forEach((e) => {
@@ -114,7 +118,7 @@ export default class LevelScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.groundGroup);
     this.physics.add.collider(this.player, this.platformGroup);
     this.physics.add.overlap(this.player, this.flag, () => {
-      if (this.miniBossDefeated) this.completeLevel();
+      if (this.miniBossDefeated) this.enterFort();
     });
     this.physics.add.overlap(this.player, this.enemyGroup, (player, enemy) => this.handleEnemyHit(player, enemy));
     this.physics.add.overlap(this.playerProjectiles, this.enemyGroup, (proj, enemy) => {
@@ -137,35 +141,118 @@ export default class LevelScene extends Phaser.Scene {
     this.callbacks.onHeartsChange(this.hearts);
   }
 
-  createPortal(cfg) {
-    const portalX = cfg.flagX;
-    const portalY = cfg.groundY - 70;
-    const radius = 42;
+  createFortGate(cfg) {
+    const gateX = cfg.flagX;
+    const gateY = cfg.groundY;
+    const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    const towerW = 46;
+    const towerH = 130;
+
+    [-68, 68].forEach((dx) => {
+      const tower = this.add.rectangle(gateX + dx, gateY - towerH / 2, towerW, towerH, 0x3a2a5c);
+      tower.setStrokeStyle(2, 0x241542, 0.8);
+      for (let i = -1; i <= 1; i++) {
+        this.add.rectangle(gateX + dx + i * 15, gateY - towerH - 7, 11, 14, 0x3a2a5c).setStrokeStyle(2, 0x241542, 0.8);
+      }
+    });
+
+    const gate = this.add.rectangle(gateX, gateY - 55, 74, 112, 0x140b28, 1);
+    gate.setStrokeStyle(3, color, 0.85);
+    this.tweens.add({ targets: gate, alpha: 0.65, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    this.flag = this.add.zone(gateX, gateY - 55, 80, 120);
+    this.physics.add.existing(this.flag, true);
+
+    // gateX sits at flagX = width - 160 (see levelConfig.js); the interior wall
+    // (75px half-width) needs to stay inside the world bounds at `width`.
+    this.interiorX = gateX + 75;
+  }
+
+  createInteriorWall(cfg) {
+    const wallX = this.interiorX;
+    const wallY = cfg.groundY - 95;
     const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
 
-    const ring = this.add.circle(portalX, portalY, radius, color, 0.25);
-    ring.setStrokeStyle(4, color, 0.9);
-    this.tweens.add({ targets: ring, scale: 1.08, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.add.circle(portalX, portalY, radius * 0.72, 0x1a1035, 1);
+    const backdrop = this.add.rectangle(0, 0, 150, 195, 0x2a1b4d, 1);
+    backdrop.setStrokeStyle(3, color, 0.5);
+    const backdropInner = this.add.rectangle(0, 0, 130, 175, 0x33215c, 1);
 
-    const faceRadius = radius * 0.62;
-    const face = createFaceOverlay(this, { textureKey: `face-friend-${this.friend.id}`, radius: faceRadius });
-    if (face) {
-      face.setPosition(portalX, portalY);
+    const frameOuter = this.add.rectangle(0, -25, 96, 96, 0xffd166);
+    const frameInner = this.add.rectangle(0, -25, 84, 84, 0x1a1035);
+
+    const photoKey = this.friend.photoTogether
+      ? `together-friend-${this.friend.id}`
+      : this.friend.photoSolo
+      ? `face-friend-${this.friend.id}`
+      : null;
+    let photoContent;
+    if (photoKey && this.textures.exists(photoKey)) {
+      photoContent = this.add.image(0, -25, photoKey);
+      photoContent.setDisplaySize(78, 78);
     } else {
-      this.add.circle(portalX, portalY, faceRadius, color, 1);
+      photoContent = this.add.rectangle(0, -25, 78, 78, color);
       this.add
-        .text(portalX, portalY, this.friend.name.trim().charAt(0).toUpperCase() || '?', {
+        .text(0, -25, this.friend.name.trim().charAt(0).toUpperCase() || '?', {
           fontFamily: 'Quicksand, sans-serif',
-          fontSize: `${Math.round(faceRadius)}px`,
+          fontSize: '30px',
           fontStyle: '700',
           color: '#2b1140',
         })
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setDepth(1);
     }
 
-    this.flag = this.add.zone(portalX, portalY, radius * 2, radius * 2.2);
-    this.physics.add.existing(this.flag, true);
+    const nameText = this.add
+      .text(0, 40, this.friend.name, {
+        fontFamily: 'Quicksand, sans-serif',
+        fontSize: '15px',
+        fontStyle: '700',
+        color: '#ffd166',
+      })
+      .setOrigin(0.5);
+
+    const sparkleL = this.add.circle(-55, -30, 3, 0xffd166, 0.9);
+    const sparkleR = this.add.circle(55, -10, 3, 0xff8fab, 0.9);
+    this.tweens.add({ targets: [sparkleL, sparkleR], alpha: 0.3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    this.interiorWall = this.add.container(wallX, wallY, [
+      backdrop,
+      backdropInner,
+      sparkleL,
+      sparkleR,
+      frameOuter,
+      frameInner,
+      photoContent,
+      nameText,
+    ]);
+    this.interiorWall.setAlpha(0);
+    this.interiorWall.setScale(0.7);
+  }
+
+  enterFort() {
+    if (this.enteringFort || this.completed) return;
+    this.enteringFort = true;
+    this.inputLocked = true;
+    this.player.body.setVelocityX(140);
+
+    this.cameras.main.stopFollow();
+    this.cameras.main.pan(this.interiorX, this.cameras.main.midPoint.y, 1100, 'Sine.easeInOut');
+
+    this.time.delayedCall(650, () => {
+      if (this.player.body) this.player.body.setVelocityX(0);
+    });
+    this.time.delayedCall(1100, () => this.revealFrame());
+  }
+
+  revealFrame() {
+    this.tweens.add({
+      targets: this.interiorWall,
+      alpha: 1,
+      scale: 1,
+      duration: 550,
+      ease: 'Back.easeOut',
+    });
+    this.time.delayedCall(1900, () => this.completeLevel());
   }
 
   spawnMiniBoss(cfg) {
@@ -179,7 +266,7 @@ export default class LevelScene extends Phaser.Scene {
     guardian.body.setSize(BOSS_ANIMAL_SIZE.width * 0.7, BOSS_ANIMAL_SIZE.height * 0.7);
     guardian.body.setOffset(BOSS_ANIMAL_SIZE.width * 0.15, BOSS_ANIMAL_SIZE.height * 0.3);
     guardian.baseKeyName = baseKey;
-    // Kept inside the guaranteed-solid ground before the portal (see SAFE_END
+    // Kept inside the guaranteed-solid ground before the gate (see SAFE_END
     // in levelConfig.js) so the patrol never drifts out over a gap.
     guardian.startX = guardX - 45;
     guardian.endX = guardX + 45;
@@ -341,26 +428,31 @@ export default class LevelScene extends Phaser.Scene {
     }
     if (this.completed) return;
     const { cursors, keys, player } = this;
-    const left = cursors.left.isDown || keys.A.isDown;
-    const right = cursors.right.isDown || keys.D.isDown;
-    const jumpKey = cursors.up.isDown || keys.W.isDown || keys.SPACE.isDown;
 
-    if (left) player.body.setVelocityX(-200);
-    else if (right) player.body.setVelocityX(200);
-    else player.body.setVelocityX(0);
+    if (!this.inputLocked) {
+      const left = cursors.left.isDown || keys.A.isDown;
+      const right = cursors.right.isDown || keys.D.isDown;
+      const jumpKey = cursors.up.isDown || keys.W.isDown || keys.SPACE.isDown;
 
-    const onGround = player.body.blocked.down || player.body.touching.down;
-    if (jumpKey && onGround && !this.jumpLock) {
-      player.body.setVelocityY(-560);
-      this.jumpLock = true;
-    }
-    if (!jumpKey) this.jumpLock = false;
+      if (left) player.body.setVelocityX(-200);
+      else if (right) player.body.setVelocityX(200);
+      else player.body.setVelocityX(0);
 
-    if ((keys.F.isDown || this.shootRequested) && time - this.lastShotAt > SHOOT_COOLDOWN) {
-      this.shoot();
-      this.lastShotAt = time;
+      const grounded = player.body.blocked.down || player.body.touching.down;
+      if (jumpKey && grounded && !this.jumpLock) {
+        player.body.setVelocityY(-560);
+        this.jumpLock = true;
+      }
+      if (!jumpKey) this.jumpLock = false;
+
+      if ((keys.F.isDown || this.shootRequested) && time - this.lastShotAt > SHOOT_COOLDOWN) {
+        this.shoot();
+        this.lastShotAt = time;
+      }
     }
     this.shootRequested = false;
+
+    const onGround = player.body.blocked.down || player.body.touching.down;
 
     animateHumanoid(player, { onGround, time, baseKey: 'hero' });
     if (this.wand) {

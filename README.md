@@ -6,12 +6,14 @@ it. Each level ends in a short boss fight against a small mythical
 creature (snake/dog/wolf/lion/griffin/minotaur/yeti/bat, cycling by
 level) that throws fireballs to dodge — she wields a little wand and
 can shoot back (F key, or the 🔮 button on screen) or jump on it —
-before a glowing portal with the friend's photo unlocks and
-completing the level rescues them: a photo of the two of them, their
-solo photo, a birthday message, and a bit of their story with her
-(where they met, first impression, impression now, a quality she loves
-about her). The last level is a full dragon boss fight; beating it
-opens a celebration screen with everyone together.
+before a small fort's gate unlocks. Walking through it, the camera
+follows her inside to a framed photo mounted on the wall with the
+friend's name beneath it, then completing the level rescues them: a
+photo of the two of them, their solo photo, a birthday message, and a
+bit of their story with her (where they met, first impression,
+impression now, a quality she loves about her). The last level is a
+full dragon boss fight; beating it opens a celebration screen with
+everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming and plain
 HTML/CSS for the title, map, friend-reveal, and finale screens. Fully
@@ -61,7 +63,7 @@ npm run dev
   level, enlarged so it's easy to make out at gameplay scale
   ([src/game/faceOverlay.js](src/game/faceOverlay.js)); square-ish
   photos work best since they're fit into a circle. The mini-boss
-  creature guarding each level's portal is drawn in
+  creature guarding each level's fort gate is drawn in
   [src/game/animals.js](src/game/animals.js) — add more types to
   `ANIMAL_TYPES` there for more variety than the current eight.
 
