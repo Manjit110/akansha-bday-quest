@@ -6,19 +6,20 @@ it. Each level ends in a short boss fight against a small mythical
 creature (snake/dog/wolf/lion/griffin/minotaur/yeti/bat, cycling by
 level) that throws fireballs to dodge — she wields a little wand and
 can shoot back (F key, or the 🔮 button on screen) or jump on it —
-before a small fort's gate unlocks. Walking through it, the camera
-follows her inside to a framed photo mounted on the wall with the
-friend's name beneath it, then completing the level rescues them: a
-photo of the two of them, their solo photo, a birthday message, and a
-bit of their story with her (where they met, first impression,
-impression now, a quality she loves about her). The last level is a
-full dragon boss fight; beating it opens a celebration screen with
-everyone together.
+before a small fort's gate unlocks. Walking through it, she vanishes
+through the doorway and reappears in a grand memory room with a high
+ceiling, where a sequence of framed pictures reveals that friend to
+her one at a time — a photo, then their birthday wish, first
+impression, where they met, impression now, and a quality she loves
+about her — tapped through at her own pace. The last level is a full
+dragon boss fight; beating it opens a celebration screen with everyone
+together.
 
-Built with [Phaser 3](https://phaser.io/) for the platforming and plain
-HTML/CSS for the title, map, friend-reveal, and finale screens. Fully
-static — no backend, progress is saved to the browser's `localStorage`
-so she can close the tab and pick up where she left off.
+Built with [Phaser 3](https://phaser.io/) for the platforming, the fort/
+gate, and the memory room, with plain HTML/CSS for the title, map, and
+finale screens. Fully static — no backend, progress is saved to the
+browser's `localStorage` so she can close the tab and pick up where she
+left off.
 
 ## Setup
 
@@ -66,6 +67,11 @@ npm run dev
   creature guarding each level's fort gate is drawn in
   [src/game/animals.js](src/game/animals.js) — add more types to
   `ANIMAL_TYPES` there for more variety than the current eight.
+- **The memory room**: [src/game/RevealRoomScene.js](src/game/RevealRoomScene.js)
+  — the card order/labels (Birthday Wish, First Impression, etc.) live
+  in `buildCards()` there if you want to reorder, rename, or add one.
+  Clicking an already-rescued friend on the map replays just this room
+  (no need to replay the level) via the same scene.
 
 ## Deploy to GitHub Pages
 

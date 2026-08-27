@@ -4,6 +4,7 @@ import { friends, finaleNote } from './data/friends.js';
 import { assetUrl } from './assetPath.js';
 import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
+import RevealRoomScene from './game/RevealRoomScene.js';
 
 const STORAGE_KEY = 'akansha-quest-progress-v1';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];
@@ -33,15 +34,6 @@ const heartsEl = document.getElementById('hearts');
 const bossHpEl = document.getElementById('boss-hp');
 const btnQuit = document.getElementById('btn-quit-level');
 const btnShoot = document.getElementById('btn-shoot');
-const revealBanner = document.getElementById('reveal-banner');
-const revealAvatar = document.getElementById('reveal-avatar');
-const revealName = document.getElementById('reveal-name');
-const revealMessage = document.getElementById('reveal-message');
-const revealFirstMet = document.getElementById('reveal-first-met');
-const revealFirstImpression = document.getElementById('reveal-first-impression');
-const revealNowImpression = document.getElementById('reveal-now-impression');
-const revealQuality = document.getElementById('reveal-quality');
-const btnRevealContinue = document.getElementById('btn-reveal-continue');
 const finaleGrid = document.getElementById('finale-grid');
 const finaleNoteEl = document.getElementById('finale-note');
 const confettiLayer = document.getElementById('confetti-layer');
@@ -82,7 +74,7 @@ function renderMap() {
         node.appendChild(initialAvatar(friend, '22px'));
       }
       node.title = `Revisit ${friend.name}`;
-      node.addEventListener('click', () => showReveal(i));
+      node.addEventListener('click', () => revisitFriend(i));
     } else if (i === state.unlocked) {
       node.classList.add('current');
       node.textContent = String(i + 1);
@@ -136,7 +128,7 @@ function ensureGame() {
     backgroundColor: '#1a1035',
     physics: { default: 'arcade', arcade: { gravity: { y: 1400 }, debug: false } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [LevelScene, BossScene],
+    scene: [LevelScene, BossScene, RevealRoomScene],
   });
   return game;
 }
@@ -144,6 +136,7 @@ function ensureGame() {
 function startLevel(index) {
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'flex';
+  heartsEl.style.display = 'flex';
   showScreen('screen-game');
   ensureGame();
   renderHearts(3);
@@ -156,9 +149,29 @@ function startLevel(index) {
       onComplete: (idx) => {
         state.unlocked = Math.max(state.unlocked, idx + 1);
         saveState();
+        game.scene.stop('RevealRoomScene');
         game.scene.stop('LevelScene');
+        showScreen('screen-map');
         renderMap();
-        showReveal(idx);
+      },
+    },
+  });
+}
+
+// Revisiting an already-rescued friend from the map replays just the
+// memory room (photo + messages), skipping the level itself.
+function revisitFriend(index) {
+  bossHpEl.style.display = 'none';
+  btnShoot.style.display = 'none';
+  showScreen('screen-game');
+  ensureGame();
+  game.scene.start('RevealRoomScene', {
+    friend: friends[index],
+    callbacks: {
+      onDone: () => {
+        game.scene.stop('RevealRoomScene');
+        showScreen('screen-map');
+        renderMap();
       },
     },
   });
@@ -200,49 +213,8 @@ btnQuit.addEventListener('click', () => {
   if (game) {
     game.scene.stop('LevelScene');
     game.scene.stop('BossScene');
+    game.scene.stop('RevealRoomScene');
   }
-  showScreen('screen-map');
-  renderMap();
-});
-
-// --- reveal screen ---
-function showReveal(index) {
-  const friend = friends[index];
-
-  // banner: photo of the two of them together, or a soft gradient placeholder
-  revealBanner.innerHTML = '';
-  if (friend.photoTogether) {
-    revealBanner.style.backgroundImage = `url("${assetUrl(friend.photoTogether)}")`;
-  } else {
-    revealBanner.style.backgroundImage = '';
-    const icon = document.createElement('div');
-    icon.className = 'banner-placeholder-icon';
-    icon.innerHTML = '🖼️<span>photo coming soon</span>';
-    revealBanner.appendChild(icon);
-  }
-
-  // avatar: their solo photo, or a colored initial
-  revealAvatar.textContent = '';
-  revealAvatar.style.background = '';
-  if (friend.photoSolo) {
-    revealAvatar.style.backgroundImage = `url("${assetUrl(friend.photoSolo)}")`;
-  } else {
-    revealAvatar.style.backgroundImage = 'none';
-    revealAvatar.style.background = friend.color;
-    revealAvatar.textContent = friend.name.trim().charAt(0).toUpperCase() || '?';
-  }
-  revealBanner.appendChild(revealAvatar);
-
-  revealName.textContent = friend.name;
-  revealMessage.textContent = friend.message;
-  revealFirstMet.textContent = friend.firstMet;
-  revealFirstImpression.textContent = friend.firstImpression;
-  revealNowImpression.textContent = friend.nowImpression;
-  revealQuality.textContent = friend.quality;
-  showScreen('screen-reveal');
-}
-
-btnRevealContinue.addEventListener('click', () => {
   showScreen('screen-map');
   renderMap();
 });

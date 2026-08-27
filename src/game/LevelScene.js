@@ -74,9 +74,8 @@ export default class LevelScene extends Phaser.Scene {
       this.platformGroup.add(rect);
     });
 
-    // --- goal: a small fort gate; entering leads to a framed photo on the wall inside ---
+    // --- goal: a small fort gate; entering leads into the memory room ---
     this.createFortGate(cfg);
-    this.createInteriorWall(cfg);
 
     // --- player: wears this level's friend's face while you play their level ---
     ensureHeroTexture(this);
@@ -163,72 +162,14 @@ export default class LevelScene extends Phaser.Scene {
     this.flag = this.add.zone(gateX, gateY - 55, 80, 120);
     this.physics.add.existing(this.flag, true);
 
-    // gateX sits at flagX = width - 160 (see levelConfig.js); the interior wall
-    // (75px half-width) needs to stay inside the world bounds at `width`.
-    this.interiorX = gateX + 75;
+    // gateX sits at flagX = width - 160 (see levelConfig.js); keep the
+    // walk-in target comfortably inside the world bounds at `width`.
+    this.interiorX = gateX + 60;
   }
 
-  createInteriorWall(cfg) {
-    const wallX = this.interiorX;
-    const wallY = cfg.groundY - 95;
-    const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
-
-    const backdrop = this.add.rectangle(0, 0, 150, 195, 0x2a1b4d, 1);
-    backdrop.setStrokeStyle(3, color, 0.5);
-    const backdropInner = this.add.rectangle(0, 0, 130, 175, 0x33215c, 1);
-
-    const frameOuter = this.add.rectangle(0, -25, 96, 96, 0xffd166);
-    const frameInner = this.add.rectangle(0, -25, 84, 84, 0x1a1035);
-
-    const photoKey = this.friend.photoTogether
-      ? `together-friend-${this.friend.id}`
-      : this.friend.photoSolo
-      ? `face-friend-${this.friend.id}`
-      : null;
-    let photoContent;
-    if (photoKey && this.textures.exists(photoKey)) {
-      photoContent = this.add.image(0, -25, photoKey);
-      photoContent.setDisplaySize(78, 78);
-    } else {
-      photoContent = this.add.rectangle(0, -25, 78, 78, color);
-      this.add
-        .text(0, -25, this.friend.name.trim().charAt(0).toUpperCase() || '?', {
-          fontFamily: 'Quicksand, sans-serif',
-          fontSize: '30px',
-          fontStyle: '700',
-          color: '#2b1140',
-        })
-        .setOrigin(0.5)
-        .setDepth(1);
-    }
-
-    const nameText = this.add
-      .text(0, 40, this.friend.name, {
-        fontFamily: 'Quicksand, sans-serif',
-        fontSize: '15px',
-        fontStyle: '700',
-        color: '#ffd166',
-      })
-      .setOrigin(0.5);
-
-    const sparkleL = this.add.circle(-55, -30, 3, 0xffd166, 0.9);
-    const sparkleR = this.add.circle(55, -10, 3, 0xff8fab, 0.9);
-    this.tweens.add({ targets: [sparkleL, sparkleR], alpha: 0.3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    this.interiorWall = this.add.container(wallX, wallY, [
-      backdrop,
-      backdropInner,
-      sparkleL,
-      sparkleR,
-      frameOuter,
-      frameInner,
-      photoContent,
-      nameText,
-    ]);
-    this.interiorWall.setAlpha(0);
-    this.interiorWall.setScale(0.7);
-  }
-
+  // She walks into the gate, the camera eases forward with her, then she
+  // fades out through the doorway -- the actual reveal happens in
+  // RevealRoomScene, which takes over the whole screen next.
   enterFort() {
     if (this.enteringFort || this.completed) return;
     this.enteringFort = true;
@@ -236,23 +177,32 @@ export default class LevelScene extends Phaser.Scene {
     this.player.body.setVelocityX(140);
 
     this.cameras.main.stopFollow();
-    this.cameras.main.pan(this.interiorX, this.cameras.main.midPoint.y, 1100, 'Sine.easeInOut');
+    this.cameras.main.pan(this.interiorX, this.cameras.main.midPoint.y, 700, 'Sine.easeInOut');
 
-    this.time.delayedCall(650, () => {
+    this.time.delayedCall(550, () => {
       if (this.player.body) this.player.body.setVelocityX(0);
     });
-    this.time.delayedCall(1100, () => this.revealFrame());
+    this.time.delayedCall(750, () => this.fadeIntoDoor());
   }
 
-  revealFrame() {
+  fadeIntoDoor() {
+    const targets = [this.player, this.wand];
+    if (this.playerFace) targets.push(this.playerFace.image);
     this.tweens.add({
-      targets: this.interiorWall,
-      alpha: 1,
-      scale: 1,
-      duration: 550,
-      ease: 'Back.easeOut',
+      targets,
+      alpha: 0,
+      scale: 0.6,
+      duration: 450,
+      ease: 'Sine.easeIn',
+      onComplete: () => this.enterRoom(),
     });
-    this.time.delayedCall(1900, () => this.completeLevel());
+  }
+
+  enterRoom() {
+    this.scene.start('RevealRoomScene', {
+      friend: this.friend,
+      callbacks: { onDone: () => this.callbacks.onComplete(this.levelIndex) },
+    });
   }
 
   spawnMiniBoss(cfg) {
