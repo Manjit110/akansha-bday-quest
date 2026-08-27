@@ -68,6 +68,14 @@ npm run dev
   creature guarding each level's fort gate is drawn in
   [src/game/animals.js](src/game/animals.js) — add more types to
   `ANIMAL_TYPES` there for more variety than the current eight.
+- **Level environments**: each level's background is one of five
+  themes — hills, mountains, city, night forest, desert — cycling by
+  level index ([src/game/levelThemes.js](src/game/levelThemes.js), add
+  more to `LEVEL_THEMES` for more variety than the current five). The
+  fort gate at each level's end is the same structure everywhere
+  (stone-coursed towers, an arched doorway, torches, a friend-colored
+  pennant) but its stone tint comes from the level's theme, so it
+  belongs to its surroundings instead of looking pasted on.
 - **The memory room**: [src/game/RevealRoomScene.js](src/game/RevealRoomScene.js)
   — the card order/labels (Birthday Wish, First Impression, etc.) live
   in `buildCards()` there if you want to reorder, rename, or add one.

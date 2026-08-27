@@ -6,14 +6,13 @@ import { createFaceOverlay } from './faceOverlay.js';
 import { ensureWandTexture } from './weapon.js';
 import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
+import { getLevelTheme } from './levelThemes.js';
 import { assetUrl } from '../assetPath.js';
 
 const PALETTE = {
   ground: 0x4a3570,
   groundTop: 0x6a4fa0,
   platform: 0x3a2a5c,
-  bgHill1: 0x2d1b56,
-  bgHill2: 0x35205f,
 };
 
 // The face shown on the player is enlarged relative to the drawn head, so
@@ -59,6 +58,7 @@ export default class LevelScene extends Phaser.Scene {
   create() {
     const cfg = generateLevel(this.levelIndex, this.totalLevels);
     this.cfg = cfg;
+    this.theme = getLevelTheme(this.levelIndex);
 
     this.physics.world.setBounds(0, 0, cfg.width, cfg.height + 400);
 
@@ -148,24 +148,76 @@ export default class LevelScene extends Phaser.Scene {
     this.callbacks.onHeartsChange(this.hearts);
   }
 
+  // Horizontal stone courses with offset mortar joints -- reads as
+  // textured brick/stone from gameplay distance without needing a real
+  // texture asset. Colors come from the level's theme (see
+  // levelThemes.js), so the fort's stone matches its surrounding biome.
+  drawStoneTexture(x, y, w, h) {
+    const { stone, stoneDark, stoneLight } = this.theme;
+    const rows = Math.max(4, Math.round(h / 15));
+    const rowH = h / rows;
+    for (let r = 0; r < rows; r++) {
+      const rowY = y - h / 2 + rowH * r + rowH / 2;
+      const shade = r % 3 === 0 ? stoneLight : r % 3 === 1 ? stone : stoneDark;
+      this.add.rectangle(x, rowY, w - 2, rowH - 2, shade);
+      const jointX = x + (r % 2 === 0 ? -w * 0.18 : w * 0.18);
+      this.add.rectangle(jointX, rowY, 2, rowH - 3, stoneDark, 0.6);
+    }
+    this.add.rectangle(x, y, w, h, 0x000000, 0).setStrokeStyle(2, stoneDark, 0.9);
+  }
+
   createFortGate(cfg) {
     const gateX = cfg.flagX;
     const gateY = cfg.groundY;
     const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    const { stoneDark, stoneLight } = this.theme;
     const towerW = 46;
     const towerH = 130;
 
     [-68, 68].forEach((dx) => {
-      const tower = this.add.rectangle(gateX + dx, gateY - towerH / 2, towerW, towerH, 0x3a2a5c);
-      tower.setStrokeStyle(2, 0x241542, 0.8);
+      const tx = gateX + dx;
+      this.drawStoneTexture(tx, gateY - towerH / 2, towerW, towerH);
       for (let i = -1; i <= 1; i++) {
-        this.add.rectangle(gateX + dx + i * 15, gateY - towerH - 7, 11, 14, 0x3a2a5c).setStrokeStyle(2, 0x241542, 0.8);
+        this.add.rectangle(tx + i * 15, gateY - towerH - 7, 11, 14, stoneDark).setStrokeStyle(1, 0x140b28, 0.8);
+      }
+
+      // a little pennant flying from each tower, colored for this friend
+      const poleTopY = gateY - towerH - 34;
+      this.add.rectangle(tx, poleTopY + 12, 2, 26, stoneLight, 0.9);
+      const flag = this.add.triangle(tx, poleTopY, 0, 0, 20, 6, 0, 12, color);
+      this.tweens.add({ targets: flag, scaleX: 0.8, duration: 480 + Math.random() * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+      // a little ivy climbing the base, for texture against all that stone
+      for (let v = 0; v < 3; v++) {
+        this.add
+          .circle(tx + (dx < 0 ? towerW / 2 - 2 : -towerW / 2 + 2), gateY - 10 - v * 16, 5, 0x4a7a4f, 0.7)
+          .setScrollFactor(1);
       }
     });
 
-    const gate = this.add.rectangle(gateX, gateY - 55, 74, 112, 0x140b28, 1);
-    gate.setStrokeStyle(3, color, 0.85);
-    this.tweens.add({ targets: gate, alpha: 0.65, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // arched stone doorway instead of a plain rectangle
+    const gateW = 74;
+    const gateH = 112;
+    const gateTopY = gateY - gateH;
+    const archG = this.add.graphics();
+    archG.fillStyle(0x140b28, 1);
+    archG.fillRoundedRect(gateX - gateW / 2, gateTopY, gateW, gateH, { tl: gateW / 2, tr: gateW / 2, bl: 0, br: 0 });
+    archG.lineStyle(3, color, 0.9);
+    archG.strokeRoundedRect(gateX - gateW / 2, gateTopY, gateW, gateH, { tl: gateW / 2, tr: gateW / 2, bl: 0, br: 0 });
+    this.tweens.add({ targets: archG, alpha: 0.65, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.rectangle(gateX, gateTopY, 14, 10, stoneLight).setAngle(45);
+
+    // torches flanking the doorway
+    [-38, 38].forEach((dx) => {
+      const tx = gateX + dx;
+      const ty = gateY - 30;
+      this.add.rectangle(tx, ty + 10, 5, 24, 0x2a1f3a);
+      const glow = this.add.circle(tx, ty - 8, 16, 0xff9f45, 0.3);
+      const flame = this.add.ellipse(tx, ty - 8, 10, 16, 0xff9f45);
+      const flameCore = this.add.ellipse(tx, ty - 6, 5, 9, 0xffd166);
+      this.tweens.add({ targets: [flame, flameCore], scaleY: 0.8, scaleX: 0.9, duration: 240 + Math.random() * 160, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: glow, alpha: 0.12, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    });
 
     this.flag = this.add.zone(gateX, gateY - 55, 80, 120);
     this.physics.add.existing(this.flag, true);
@@ -282,21 +334,22 @@ export default class LevelScene extends Phaser.Scene {
   }
 
   drawBackground(cfg) {
-    // Tint the sky/hills toward this level's friend's own color, so each
-    // level feels a little like *them* rather than one generic backdrop
-    // reused 19 times over.
+    // Each level picks one of a handful of environments (mountains, city,
+    // forest, desert, rolling hills) by index, then that theme's own
+    // palette is tinted a little further toward this friend's color -- so
+    // levels vary by biome *and* still feel personal, rather than all 19
+    // sharing one backdrop.
     const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
-    const skyColor = mixColors(0x1a1035, friendColor, 0.1);
-    const hill1Color = mixColors(PALETTE.bgHill1, friendColor, 0.25);
-    const hill2Color = mixColors(PALETTE.bgHill2, friendColor, 0.25);
+    const theme = this.theme;
+    const palette = {
+      layer1: mixColors(theme.layer1, friendColor, 0.2),
+      layer2: mixColors(theme.layer2, friendColor, 0.2),
+    };
+    const skyColor = mixColors(theme.sky, friendColor, 0.1);
     this.cameras.main.setBackgroundColor(skyColor);
 
-    for (let i = 0; i < Math.ceil(cfg.width / 400) + 1; i++) {
-      const hill = this.add.ellipse(i * 400 + 100, cfg.groundY + 60, 500, 220, hill1Color);
-      hill.setScrollFactor(0.25);
-      const hill2 = this.add.ellipse(i * 400 + 300, cfg.groundY + 90, 400, 180, hill2Color);
-      hill2.setScrollFactor(0.45);
-    }
+    theme.draw(this, cfg, palette);
+
     for (let i = 0; i < 24; i++) {
       const star = this.add.circle(Math.random() * cfg.width, Math.random() * (cfg.groundY - 60), 1.6, 0xffffff, 0.6);
       star.setScrollFactor(0.6);
