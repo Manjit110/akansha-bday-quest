@@ -130,6 +130,12 @@ function ensureGame() {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     scene: [LevelScene, BossScene, RevealRoomScene],
   });
+  // Opt-in hook for scripts/check-levels.mjs: it sets this flag via
+  // page.addInitScript() before the page loads, so it can drive scenes
+  // directly. Never set for a real player, so this is a no-op for her.
+  if (window.__EXPOSE_GAME_FOR_TESTS__) {
+    window.__testGame = game;
+  }
   return game;
 }
 
@@ -261,4 +267,22 @@ btnStart.addEventListener('click', () => {
   renderMap();
 });
 
+// Cheat code for jumping straight to any level without playing through the
+// ones before it: open the game with ?level=N (matching the number shown on
+// the map, 1-19) or ?level=boss for the dragon fight. Doesn't touch saved
+// progress -- completing a level this way still unlocks it normally.
+function applyCheatCode() {
+  const level = new URLSearchParams(window.location.search).get('level');
+  if (!level) return;
+  if (level.toLowerCase() === 'boss') {
+    startBoss();
+    return;
+  }
+  const idx = parseInt(level, 10) - 1;
+  if (Number.isInteger(idx) && idx >= 0 && idx < friends.length) {
+    startLevel(idx);
+  }
+}
+
 renderMap();
+applyCheatCode();

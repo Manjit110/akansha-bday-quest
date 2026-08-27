@@ -11,9 +11,10 @@ through the doorway and reappears in a grand memory room with a high
 ceiling, where a sequence of framed pictures reveals that friend to
 her one at a time — a photo, then their birthday wish, first
 impression, where they met, impression now, and a quality she loves
-about her — tapped through at her own pace. The last level is a full
-dragon boss fight; beating it opens a celebration screen with everyone
-together.
+about her — tapped through at her own pace, with a photo of the two of
+them together at the bottom of the room throughout. The last level is
+a full dragon boss fight; beating it opens a celebration screen with
+everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming, the fort/
 gate, and the memory room, with plain HTML/CSS for the title, map, and
@@ -71,7 +72,37 @@ npm run dev
   — the card order/labels (Birthday Wish, First Impression, etc.) live
   in `buildCards()` there if you want to reorder, rename, or add one.
   Clicking an already-rescued friend on the map replays just this room
-  (no need to replay the level) via the same scene.
+  (no need to replay the level) via the same scene. The "together" photo
+  at the bottom uses `photoTogether` once you add one; until then it
+  shows a placeholder (two colored initials + a heart) so the spot never
+  looks broken.
+
+## Testing
+
+`npm test` builds the project, serves it, and drives it with a real
+headless browser to check the two ways a level can quietly become
+unbeatable: bad procedural geometry (a gap or platform that's physically
+out of jump range) and a mini-boss fight that isn't actually winnable.
+Both have happened for real during development — this is meant to run
+after any change that touches level generation, physics, or the boss
+fight, not just once. See
+[scripts/check-levels.mjs](scripts/check-levels.mjs).
+
+## Playing out of order
+
+Progression is normally locked level-by-level, but you can jump straight
+to any level (or the dragon fight) without playing the ones before it —
+useful for previewing or testing. Open the game with `?level=N` in the
+URL (N is the number shown on the map, 1 through however many friends
+there are) or `?level=boss`, e.g.:
+
+```
+https://<username>.github.io/<repo-name>/?level=7
+https://<username>.github.io/<repo-name>/?level=boss
+```
+
+This doesn't touch her saved progress — it's just a different starting
+point, not a shortcut through a level's own content.
 
 ## Deploy to GitHub Pages
 

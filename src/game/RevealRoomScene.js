@@ -1,13 +1,11 @@
 import Phaser from 'phaser';
-import { ensureHeroTexture, headGeometry, HERO_SIZE } from './humanoid.js';
-import { createFaceOverlay } from './faceOverlay.js';
 import { assetUrl } from '../assetPath.js';
 
-// Enlarge the character's face here too, matching LevelScene, so it's the
-// same "wears the friend's face" character continuing into this scene.
-const PLAYER_FACE_SCALE = 1.8;
 const W = 960;
 const H = 540;
+// Placeholder color for Akansha's half of the "together" photo until a real
+// one is supplied -- matches the hero's own gold, since she's the hero.
+const AKANSHA_PLACEHOLDER_COLOR = 0xffd166;
 
 export default class RevealRoomScene extends Phaser.Scene {
   constructor() {
@@ -40,23 +38,7 @@ export default class RevealRoomScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor('#1a1035');
     this.drawRoom();
-
-    ensureHeroTexture(this);
-    this.character = this.add.image(W / 2, H - 90, 'hero-idle');
-    this.character.setAlpha(0);
-    this.tweens.add({ targets: this.character, alpha: 1, duration: 500 });
-    this.tweens.add({ targets: this.character, y: '-=5', duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    const heroHead = headGeometry(HERO_SIZE);
-    this.charFace = createFaceOverlay(this, {
-      textureKey: `face-friend-${this.friend.id}`,
-      radius: heroHead.radius * PLAYER_FACE_SCALE,
-    });
-    if (this.charFace) {
-      this.charFace.setPosition(this.character.x, this.character.y + heroHead.offsetY);
-      this.charFace.image.setAlpha(0);
-      this.tweens.add({ targets: this.charFace.image, alpha: 1, duration: 500 });
-    }
+    this.createTogetherVisual();
 
     this.cards = this.buildCards();
     this.cardContainer = this.add.container(W / 2, 160);
@@ -107,6 +89,74 @@ export default class RevealRoomScene extends Phaser.Scene {
     for (let i = 0; i < 18; i++) {
       this.add.circle(Math.random() * W, Math.random() * 90 + 8, 1.4, 0xffffff, 0.5);
     }
+  }
+
+  // A photo of the two of them together, at the bottom of the room -- or,
+  // until a real photoTogether is supplied, a placeholder of the two
+  // avatars side by side so the spot reads clearly as "their photo goes
+  // here" rather than looking broken.
+  createTogetherVisual() {
+    const f = this.friend;
+    const cx = W / 2;
+    const cy = H - 108;
+    const togetherKey = `together-friend-${f.id}`;
+    const friendColor = Phaser.Display.Color.HexStringToColor(f.color).color;
+
+    this.togetherGroup = [];
+
+    if (this.textures.exists(togetherKey)) {
+      const frameW = 172;
+      const frameH = 118;
+      const outer = this.add.rectangle(cx, cy, frameW, frameH, 0xffd166);
+      const photo = this.add.image(cx, cy, togetherKey);
+      photo.setDisplaySize(frameW - 10, frameH - 10);
+      const caption = this.add
+        .text(cx, cy + frameH / 2 + 16, `Akansha & ${f.name}`, {
+          fontFamily: 'Quicksand, sans-serif',
+          fontSize: '12px',
+          fontStyle: '700',
+          color: '#c9b8e8',
+        })
+        .setOrigin(0.5);
+      this.togetherGroup.push(outer, photo, caption);
+    } else {
+      const r = 27;
+      const gap = 8;
+      const leftX = cx - r - gap / 2;
+      const rightX = cx + r + gap / 2;
+
+      const akanshaCircle = this.add.circle(leftX, cy, r, AKANSHA_PLACEHOLDER_COLOR);
+      akanshaCircle.setStrokeStyle(3, 0x1a1035, 1);
+      const akanshaLabel = this.add
+        .text(leftX, cy, 'A', { fontFamily: 'Press Start 2P, monospace', fontSize: '18px', color: '#2b1140' })
+        .setOrigin(0.5);
+
+      const friendCircle = this.add.circle(rightX, cy, r, friendColor);
+      friendCircle.setStrokeStyle(3, 0x1a1035, 1);
+      const friendLabel = this.add
+        .text(rightX, cy, f.name.trim().charAt(0).toUpperCase() || '?', {
+          fontFamily: 'Press Start 2P, monospace',
+          fontSize: '18px',
+          color: '#2b1140',
+        })
+        .setOrigin(0.5);
+
+      const heart = this.add.text(cx, cy - r - 12, '💛', { fontSize: '15px' }).setOrigin(0.5);
+
+      const caption = this.add
+        .text(cx, cy + r + 16, `Akansha & ${f.name}`, {
+          fontFamily: 'Quicksand, sans-serif',
+          fontSize: '12px',
+          fontStyle: '700',
+          color: '#c9b8e8',
+        })
+        .setOrigin(0.5);
+
+      this.togetherGroup.push(akanshaCircle, akanshaLabel, friendCircle, friendLabel, heart, caption);
+    }
+
+    this.togetherGroup.forEach((o) => o.setAlpha(0));
+    this.tweens.add({ targets: this.togetherGroup, alpha: 1, duration: 500 });
   }
 
   buildCards() {
@@ -191,7 +241,7 @@ export default class RevealRoomScene extends Phaser.Scene {
     if (this.cardIndex >= this.cards.length) {
       this.finishing = true;
       this.tweens.add({
-        targets: [this.cardContainer, this.character, this.charFace?.image, this.hint].filter(Boolean),
+        targets: [this.cardContainer, this.hint, ...this.togetherGroup].filter(Boolean),
         alpha: 0,
         duration: 400,
         onComplete: () => this.callbacks.onDone(),

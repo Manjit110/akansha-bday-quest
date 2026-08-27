@@ -20,6 +20,13 @@ const PLAYER_FACE_SCALE = 1.8;
 const SHOOT_COOLDOWN = 380;
 const BOSS_HP = 3;
 
+// How often the mini-boss throws a fireball, in ms. Ramps down slightly
+// with level difficulty but never below the floor -- kept slow/gentle on
+// purpose (this is a birthday gift, not meant to be genuinely hard).
+const BOSS_FIRE_DELAY_BASE = 3200;
+const BOSS_FIRE_DELAY_STEP = 50;
+const BOSS_FIRE_DELAY_MIN = 2200;
+
 export default class LevelScene extends Phaser.Scene {
   constructor() {
     super('LevelScene');
@@ -231,7 +238,7 @@ export default class LevelScene extends Phaser.Scene {
     );
 
     this.bossThrowTimer = this.time.addEvent({
-      delay: Math.max(1300, 2200 - this.levelIndex * 40),
+      delay: Math.max(BOSS_FIRE_DELAY_MIN, BOSS_FIRE_DELAY_BASE - this.levelIndex * BOSS_FIRE_DELAY_STEP),
       callback: () => this.bossThrow(guardian),
       loop: true,
     });
