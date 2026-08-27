@@ -136,8 +136,18 @@ function ensureGame() {
     backgroundColor: '#1a1035',
     physics: { default: 'arcade', arcade: { gravity: { y: 1400 }, debug: false } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [LevelScene, BossScene, RevealRoomScene],
+    // Scenes are registered below via scene.add(), not listed here. Phaser
+    // auto-starts whichever scene is *first* in a `scene: [...]` array the
+    // instant the game boots -- before any real level/friend data exists --
+    // which crashed LevelScene.create() on undefined friend data and could
+    // leave the whole game loop dead. That's why replaying an already-
+    // finished level, or the dragon fight, could come up blank: whichever
+    // scene actually needed to run got starved by the auto-started one
+    // crashing first.
   });
+  game.scene.add('LevelScene', LevelScene);
+  game.scene.add('BossScene', BossScene);
+  game.scene.add('RevealRoomScene', RevealRoomScene);
   // Opt-in hook for scripts/check-levels.mjs: it sets this flag via
   // page.addInitScript() before the page loads, so it can drive scenes
   // directly. Never set for a real player, so this is a no-op for her.

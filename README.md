@@ -106,16 +106,20 @@ npm run dev
 ## Testing
 
 `npm test` builds the project, serves it, and drives it with a real
-headless browser to check three ways a level can quietly break: bad
+headless browser to check the ways this has actually broken before: bad
 procedural geometry (a gap or platform that's physically out of jump
-range), a mini-boss fight that isn't actually winnable, and — since
-`LevelScene` is one persistent scene instance Phaser reuses for every
-level rather than a fresh one per level — any state left over from
-finishing one level (like input being locked while she walks into a
-fort) leaking into the next and leaving her stuck. All three have
-happened for real during development — this is meant to run after any
-change that touches level generation, physics, the boss fight, or the
-fort/level-transition flow, not just once. See
+range), a mini-boss fight that isn't actually winnable, level state
+leaking into the next level and leaving her stuck (`LevelScene` is one
+persistent scene instance Phaser reuses for every level, not a fresh one
+per level, so anything left set when one level finishes can freeze the
+next), revisiting an already-finished friend from the map, and the
+dragon fight itself — both of which came up blank/unplayable from the
+same root cause: Phaser auto-starts whichever scene is listed *first* in
+a `scene: [...]` array the moment the game boots, before any real data
+exists, silently crashing it and taking the whole render loop down with
+it. All of these have happened for real during development — this is
+meant to run after any change that touches level generation, physics,
+the boss fight, or scene setup, not just once. See
 [scripts/check-levels.mjs](scripts/check-levels.mjs).
 
 ## Playing out of order

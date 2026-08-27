@@ -22,6 +22,10 @@ export const DRAGON_HP = 3;
 const DRAGON_X = 740;
 const DRAGON_HIGH_Y = 130;
 const DRAGON_LOW_Y = 300;
+// Where the belly/weak-point sits relative to the dragon container's own
+// origin -- kept as one constant so the decorative belly and the physics
+// weak-point circle stay lined up.
+const WEAK_OFFSET_Y = 20;
 
 export default class BossScene extends Phaser.Scene {
   constructor() {
@@ -65,10 +69,9 @@ export default class BossScene extends Phaser.Scene {
     this.playerFace = createFaceOverlay(this, { textureKey: 'face-player', radius: heroHead.radius });
     this.playerFaceOffsetY = heroHead.offsetY;
 
-    // dragon (simple composite: body + belly + weak point)
-    this.dragon = this.add.rectangle(DRAGON_X, DRAGON_HIGH_Y, 130, 90, PALETTE.dragonBody);
-    this.dragonBelly = this.add.ellipse(DRAGON_X, DRAGON_HIGH_Y + 30, 70, 40, PALETTE.dragonBelly);
-    this.weakPoint = this.add.circle(DRAGON_X, DRAGON_HIGH_Y + 50, 16, PALETTE.weakSafe);
+    this.buildDragon();
+    this.weakPoint = this.add.circle(DRAGON_X, DRAGON_HIGH_Y + WEAK_OFFSET_Y, 15, PALETTE.weakSafe, 0.9);
+    this.weakPoint.setStrokeStyle(2, 0xffffff, 0.45);
     this.physics.add.existing(this.weakPoint, true);
 
     this.fireballs = this.physics.add.group({ allowGravity: false });
@@ -86,12 +89,57 @@ export default class BossScene extends Phaser.Scene {
     this.fireTimer = this.time.addEvent({ delay: 950, callback: () => this.spawnFireball(), loop: true });
   }
 
+  // A small composite dragon (container of primitives) in the same chibi/
+  // low-poly style as the level mini-bosses (see animals.js), in place of
+  // a flat rectangle with two circles that didn't read as a dragon at all.
+  // Built as a Container so the whole thing can be tweened as one unit.
+  buildDragon() {
+    const { dragonBody: body, dragonBelly: belly } = PALETTE;
+    const dark = 0x5c1428;
+    const g = this.add.container(DRAGON_X, DRAGON_HIGH_Y);
+
+    const tail = this.add.triangle(-40, 6, 0, 0, -55, -18, -18, -14, dark);
+    const wingL = this.add.triangle(-8, -10, 0, 0, -58, -50, 4, -18, dark).setAlpha(0.92);
+    const wingR = this.add.triangle(8, -10, 0, 0, 58, -50, -4, -18, dark).setAlpha(0.92);
+
+    const torso = this.add.graphics();
+    torso.fillStyle(body, 1);
+    torso.fillRoundedRect(-45, -30, 90, 60, 22);
+    torso.fillStyle(dark, 1);
+    [-24, -4, 16].forEach((x) => {
+      torso.fillTriangle(x - 7, -28, x, -44, x + 7, -28);
+    });
+
+    const bellyShape = this.add.ellipse(4, WEAK_OFFSET_Y - 2, 54, 30, belly);
+
+    const head = this.add.circle(50, -8, 19, body);
+    const snout = this.add.triangle(58, -2, 0, 0, 24, 5, 0, 12, body);
+    const hornL = this.add.triangle(42, -20, 0, 0, -5, -20, 10, -2, dark);
+    const hornR = this.add.triangle(54, -22, 0, 0, -3, -20, 12, -2, dark);
+    const eyeWhite = this.add.circle(56, -12, 4.5, 0xffffff);
+    const eyePupil = this.add.circle(57.5, -12, 2.1, 0x1a1035);
+    const nostril = this.add.circle(74, 1, 1.6, 0x3a0d1c, 0.8);
+
+    g.add([tail, wingL, wingR, torso, bellyShape, head, snout, hornL, hornR, eyeWhite, eyePupil, nostril]);
+    this.dragonGroup = g;
+    this.dragonWings = [wingL, wingR];
+
+    this.tweens.add({
+      targets: this.dragonWings,
+      scaleX: 0.8,
+      duration: 380,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
   swoop() {
     if (this.finished) return;
     this.vulnerable = true;
     this.weakPoint.fillColor = PALETTE.weakHot;
     this.tweens.add({
-      targets: [this.dragon, this.dragonBelly],
+      targets: this.dragonGroup,
       y: `+=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
       duration: 500,
       ease: 'Sine.easeOut',
@@ -102,7 +150,7 @@ export default class BossScene extends Phaser.Scene {
           this.vulnerable = false;
           this.weakPoint.fillColor = PALETTE.weakSafe;
           this.tweens.add({
-            targets: [this.dragon, this.dragonBelly],
+            targets: this.dragonGroup,
             y: `-=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
             duration: 500,
             ease: 'Sine.easeIn',
@@ -114,14 +162,14 @@ export default class BossScene extends Phaser.Scene {
   }
 
   syncWeakPoint() {
-    this.weakPoint.setPosition(this.dragon.x, this.dragon.y + 50);
+    this.weakPoint.setPosition(this.dragonGroup.x, this.dragonGroup.y + WEAK_OFFSET_Y);
     this.weakPoint.body.updateFromGameObject();
   }
 
   spawnFireball() {
     if (this.finished) return;
-    const fx = this.dragon.x + (Math.random() - 0.5) * 60;
-    const fb = this.add.circle(fx, this.dragon.y + 20, 9, PALETTE.fireball);
+    const fx = this.dragonGroup.x + (Math.random() - 0.5) * 60;
+    const fb = this.add.circle(fx, this.dragonGroup.y + 20, 9, PALETTE.fireball);
     this.physics.add.existing(fb);
     fb.body.setAllowGravity(false);
     fb.body.setVelocity((Math.random() - 0.5) * 60, 260);
@@ -142,13 +190,13 @@ export default class BossScene extends Phaser.Scene {
     this.weakPoint.fillColor = PALETTE.weakSafe;
     this.player.body.setVelocityY(-320);
 
-    this.tweens.add({ targets: [this.dragon, this.dragonBelly], alpha: 0.3, duration: 100, yoyo: true, repeat: 3 });
+    this.tweens.add({ targets: this.dragonGroup, alpha: 0.3, duration: 100, yoyo: true, repeat: 3 });
 
     if (this.dragonHP <= 0) {
       this.winFight();
     } else {
       this.tweens.add({
-        targets: [this.dragon, this.dragonBelly],
+        targets: this.dragonGroup,
         y: `-=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
         duration: 400,
         onUpdate: () => this.syncWeakPoint(),
@@ -183,7 +231,7 @@ export default class BossScene extends Phaser.Scene {
     this.fireTimer.remove();
     this.fireballs.clear(true, true);
     this.tweens.add({
-      targets: [this.dragon, this.dragonBelly, this.weakPoint],
+      targets: [this.dragonGroup, this.weakPoint],
       alpha: 0,
       scale: 0.6,
       duration: 900,

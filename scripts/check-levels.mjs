@@ -248,6 +248,99 @@ async function checkLevelTransition(page) {
   }
 }
 
+// Regression test for a real bug: Phaser auto-starts whichever scene is
+// listed *first* in a `scene: [...]` array the instant the game boots,
+// before any real level/friend data exists. LevelScene was first in that
+// array, so every game boot silently crashed it on undefined friend data
+// and could leave the whole render loop dead -- which meant replaying an
+// already-finished friend from the map (revisitFriend() starts
+// RevealRoomScene directly, never LevelScene) came up blank.
+async function checkRevisitAfterCompletion(page, pageErrors) {
+  console.log('\n== Revisiting an already-completed friend (previous bug: blank screen) ==');
+
+  const before = pageErrors.length;
+
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => {
+    localStorage.setItem('akansha-quest-progress-v1', JSON.stringify({ unlocked: 19, bossDefeated: false }));
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await page.click('#btn-start');
+  await page.waitForSelector('.map-node.done');
+  await page.click('.map-node.done');
+  await page.waitForTimeout(1200);
+
+  const roomActive = await page.evaluate(() => {
+    const room = window.__testGame && window.__testGame.scene.getScene('RevealRoomScene');
+    return !!(room && room.scene.isActive());
+  });
+
+  const newErrors = pageErrors.splice(before);
+  if (newErrors.length) {
+    newErrors.forEach((e) => fail(`revisit: console error: ${e}`));
+  } else if (!roomActive) {
+    fail('revisit: memory room never became active -- screen is blank');
+  } else {
+    pass('revisit: memory room opens normally for an already-completed friend');
+  }
+}
+
+// Same root cause as above, different symptom: the dragon fight is the
+// other scene that's started directly (never through LevelScene), so it
+// was equally vulnerable to the auto-started LevelScene crashing the game
+// loop out from under it -- "no dragon, level not passable".
+async function checkDragonFight(page, pageErrors) {
+  console.log('\n== Dragon boss fight (must render and be winnable) ==');
+
+  const before = pageErrors.length;
+
+  await page.goto(`${BASE_URL}?level=boss`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#game-container canvas');
+  await page.waitForTimeout(600);
+
+  const dragonRendered = await page.evaluate(() => {
+    const scene = window.__testGame && window.__testGame.scene.getScene('BossScene');
+    return !!(scene && scene.dragonGroup && scene.dragonGroup.active);
+  });
+  if (!dragonRendered) {
+    fail('dragon fight: BossScene never rendered the dragon');
+    pageErrors.splice(before);
+    return;
+  }
+
+  const result = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const scene = window.__testGame.scene.getScene('BossScene');
+        let hits = 0;
+        function tryHit() {
+          if (scene.finished || hits >= 6) {
+            resolve({ finished: scene.finished, hits });
+            return;
+          }
+          scene.vulnerable = true;
+          scene.tryHitDragon();
+          hits++;
+          setTimeout(tryHit, 150);
+        }
+        tryHit();
+      })
+  );
+  await page.waitForTimeout(1200); // winFight()'s own fade-out tween before onVictory fires
+
+  const finaleActive = await page.evaluate(() => document.getElementById('screen-finale').classList.contains('active'));
+
+  const newErrors = pageErrors.splice(before);
+  if (newErrors.length) {
+    newErrors.forEach((e) => fail(`dragon fight: console error: ${e}`));
+  } else if (result.finished && finaleActive) {
+    pass(`dragon fight: defeated in ${result.hits} hits, finale screen shown`);
+  } else {
+    fail(`dragon fight: NOT completable (finished=${result.finished}, finale shown=${finaleActive})`);
+  }
+}
+
 async function checkBossFightsAndCompletion(page) {
   console.log('\n== Mini-boss fights (defeatable via the shoot mechanic) ==');
 
@@ -342,6 +435,8 @@ async function main() {
     });
 
     await checkLevelTransition(page);
+    await checkRevisitAfterCompletion(page, pageErrors);
+    await checkDragonFight(page, pageErrors);
     await checkBossFightsAndCompletion(page);
 
     if (pageErrors.length) {
