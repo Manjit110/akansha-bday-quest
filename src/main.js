@@ -9,6 +9,14 @@ import RevealRoomScene from './game/RevealRoomScene.js';
 const STORAGE_KEY = 'akansha-quest-progress-v1';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];
 
+// Canvas text (used throughout the Phaser scenes) doesn't wait for webfonts
+// on its own -- it just silently falls back if the font isn't ready yet.
+// Trigger the fetch now, as early as possible, so Caveat is loaded well
+// before she reaches the memory room several screens later.
+if (document.fonts) {
+  document.fonts.load('600 20px Caveat').catch(() => {});
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

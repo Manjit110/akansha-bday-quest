@@ -75,7 +75,18 @@ npm run dev
   (no need to replay the level) via the same scene. The "together" photo
   at the bottom uses `photoTogether` once you add one; until then it
   shows a placeholder (two colored initials + a heart) so the spot never
-  looks broken.
+  looks broken. Cards are tilted and taped like something actually
+  pinned up rather than flat UI panels, and the birthday
+  message/impressions render in a handwritten font (Caveat) instead of
+  the game's usual sans-serif, so they read as written rather than
+  printed.
+- **Per-friend color theming**: each level's sky/hills and the memory
+  room's backdrop are subtly tinted toward that friend's own `color`
+  ([src/game/color.js](src/game/color.js)'s `mixColors`), so nothing
+  looks like one generic backdrop reused 19 times. Ambient sparkles
+  ([src/game/particles.js](src/game/particles.js)) drift through both,
+  deliberately kept to a fixed warm palette rather than tinted the same
+  way — a sparkle the same hue as its background disappears.
 
 ## Testing
 

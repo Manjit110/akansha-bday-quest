@@ -1,11 +1,17 @@
 import Phaser from 'phaser';
 import { assetUrl } from '../assetPath.js';
+import { createAmbientSparkles } from './particles.js';
+import { mixColors } from './color.js';
 
 const W = 960;
 const H = 540;
 // Placeholder color for Akansha's half of the "together" photo until a real
 // one is supplied -- matches the hero's own gold, since she's the hero.
 const AKANSHA_PLACEHOLDER_COLOR = 0xffd166;
+
+// A slight, consistent tilt per card (like something actually pinned up),
+// not a fresh random angle every time you revisit.
+const CARD_ROTATIONS = [-3, 2.5, -2, 3, -2.5, 2];
 
 export default class RevealRoomScene extends Phaser.Scene {
   constructor() {
@@ -36,7 +42,6 @@ export default class RevealRoomScene extends Phaser.Scene {
     const btnShoot = document.getElementById('btn-shoot');
     if (btnShoot) btnShoot.style.display = 'none';
 
-    this.cameras.main.setBackgroundColor('#1a1035');
     this.drawRoom();
     this.createTogetherVisual();
 
@@ -68,12 +73,18 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   drawRoom() {
-    this.add.rectangle(W / 2, H / 2, W, H, 0x2a1b4d);
-    this.add.rectangle(W / 2, H - 40, W, 80, 0x3a2a5c);
-    this.add.ellipse(W / 2, H - 38, 280, 44, 0x4a3570, 0.55);
+    const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    const backdrop = mixColors(0x2a1b4d, friendColor, 0.14);
+    const floor = mixColors(0x3a2a5c, friendColor, 0.14);
+    const pillar = mixColors(0x33215c, friendColor, 0.14);
+    this.cameras.main.setBackgroundColor(backdrop);
+
+    this.add.rectangle(W / 2, H / 2, W, H, backdrop);
+    this.add.rectangle(W / 2, H - 40, W, 80, floor);
+    this.add.ellipse(W / 2, H - 38, 280, 44, mixColors(0x4a3570, friendColor, 0.14), 0.55);
 
     [70, W - 70].forEach((x) => {
-      this.add.rectangle(x, H / 2, 46, H, 0x33215c).setStrokeStyle(2, 0x241542, 0.7);
+      this.add.rectangle(x, H / 2, 46, H, pillar).setStrokeStyle(2, 0x241542, 0.7);
       this.add.rectangle(x, 24, 70, 30, 0x241542);
       this.add.rectangle(x, H - 72, 70, 20, 0x241542);
     });
@@ -89,6 +100,15 @@ export default class RevealRoomScene extends Phaser.Scene {
     for (let i = 0; i < 18; i++) {
       this.add.circle(Math.random() * W, Math.random() * 90 + 8, 1.4, 0xffffff, 0.5);
     }
+
+    // Fixed warm palette, not tinted with friendColor -- a sparkle in the
+    // same hue as the now-tinted backdrop would barely show up.
+    this.sparkles = createAmbientSparkles(this, {
+      x: 0,
+      y: 90,
+      width: W,
+      height: H - 180,
+    });
   }
 
   // A photo of the two of them together, at the bottom of the room -- or,
@@ -172,6 +192,14 @@ export default class RevealRoomScene extends Phaser.Scene {
     ];
   }
 
+  // A small strip of "tape" straddling the top edge, so the card reads as
+  // pinned up rather than a plain UI panel.
+  addTape(h, index) {
+    const tape = this.add.rectangle(0, -h / 2, 46, 16, 0xfff2c7, 0.55);
+    tape.setAngle(index % 2 === 0 ? -7 : 7);
+    return tape;
+  }
+
   showCard(index) {
     this.cardContainer.removeAll(true);
     const card = this.cards[index];
@@ -179,12 +207,15 @@ export default class RevealRoomScene extends Phaser.Scene {
 
     if (card.type === 'photo') {
       const size = 176;
+      const shadow = this.add.rectangle(5, 7, size, size, 0x000000, 0.35);
       const outer = this.add.rectangle(0, 0, size, size, 0xffd166);
       const inner = this.add.rectangle(0, 0, size - 12, size - 12, 0x1a1035);
       let photo;
+      const parts = [shadow, outer, inner];
       if (card.photoKey && this.textures.exists(card.photoKey)) {
         photo = this.add.image(0, 0, card.photoKey);
         photo.setDisplaySize(size - 22, size - 22);
+        parts.push(photo);
       } else {
         photo = this.add.rectangle(0, 0, size - 22, size - 22, color);
         const initial = this.add
@@ -194,7 +225,7 @@ export default class RevealRoomScene extends Phaser.Scene {
             color: '#2b1140',
           })
           .setOrigin(0.5);
-        this.cardContainer.add(initial);
+        parts.push(photo, initial);
       }
       const label = this.add
         .text(0, size / 2 + 26, card.label, {
@@ -203,10 +234,12 @@ export default class RevealRoomScene extends Phaser.Scene {
           color: '#ffd166',
         })
         .setOrigin(0.5);
-      this.cardContainer.add([outer, inner, photo, label]);
+      parts.push(label, this.addTape(size, index));
+      this.cardContainer.add(parts);
     } else {
       const w = 480;
       const h = 190;
+      const shadow = this.add.rectangle(5, 7, w, h, 0x000000, 0.35);
       const frame = this.add.rectangle(0, 0, w, h, 0x33215c);
       frame.setStrokeStyle(4, 0xffd166, 0.9);
       const iconText = this.add.text(0, -h / 2 + 26, card.icon, { fontSize: '26px' }).setOrigin(0.5);
@@ -219,20 +252,34 @@ export default class RevealRoomScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
       const body = this.add
-        .text(0, 12, card.text || '', {
-          fontFamily: 'Quicksand, sans-serif',
-          fontSize: '16px',
+        .text(0, 16, card.text || '', {
+          fontFamily: 'Caveat, cursive',
+          fontSize: '25px',
+          fontStyle: '600',
           color: '#fdf6ff',
           align: 'center',
-          wordWrap: { width: w - 60 },
+          wordWrap: { width: w - 70 },
         })
         .setOrigin(0.5);
-      this.cardContainer.add([frame, iconText, label, body]);
+      this.cardContainer.add([shadow, frame, iconText, label, body, this.addTape(h, index)]);
     }
 
+    this.cardContainer.setRotation(Phaser.Math.DegToRad(CARD_ROTATIONS[index % CARD_ROTATIONS.length]));
     this.cardContainer.setAlpha(0);
-    this.cardContainer.setScale(0.85);
-    this.tweens.add({ targets: this.cardContainer, alpha: 1, scale: 1, duration: 350, ease: 'Back.easeOut' });
+
+    // Alternate between a scale-in and a slide-in so consecutive reveals
+    // don't all move the same way.
+    if (index % 2 === 1) {
+      this.cardContainer.setScale(1);
+      this.cardContainer.x = W / 2 + 55;
+      this.tweens.add({ targets: this.cardContainer, alpha: 1, x: W / 2, duration: 420, ease: 'Cubic.easeOut' });
+    } else {
+      this.cardContainer.x = W / 2;
+      this.cardContainer.setScale(0.85);
+      this.tweens.add({ targets: this.cardContainer, alpha: 1, scale: 1, duration: 350, ease: 'Back.easeOut' });
+    }
+
+    if (this.sparkles) this.sparkles.explode(8, this.cardContainer.x, this.cardContainer.y);
   }
 
   advance() {

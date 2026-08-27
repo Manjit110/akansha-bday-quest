@@ -4,6 +4,8 @@ import { ensureHeroTexture, ensureImpTexture, animateHumanoid, headGeometry, HER
 import { ensureAnimalTexture, ANIMAL_TYPES, BOSS_ANIMAL_SIZE } from './animals.js';
 import { createFaceOverlay } from './faceOverlay.js';
 import { ensureWandTexture } from './weapon.js';
+import { createAmbientSparkles } from './particles.js';
+import { mixColors } from './color.js';
 import { assetUrl } from '../assetPath.js';
 
 const PALETTE = {
@@ -58,7 +60,6 @@ export default class LevelScene extends Phaser.Scene {
     const cfg = generateLevel(this.levelIndex, this.totalLevels);
     this.cfg = cfg;
 
-    this.cameras.main.setBackgroundColor('#1a1035');
     this.physics.world.setBounds(0, 0, cfg.width, cfg.height + 400);
 
     this.drawBackground(cfg);
@@ -281,16 +282,36 @@ export default class LevelScene extends Phaser.Scene {
   }
 
   drawBackground(cfg) {
+    // Tint the sky/hills toward this level's friend's own color, so each
+    // level feels a little like *them* rather than one generic backdrop
+    // reused 19 times over.
+    const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    const skyColor = mixColors(0x1a1035, friendColor, 0.1);
+    const hill1Color = mixColors(PALETTE.bgHill1, friendColor, 0.25);
+    const hill2Color = mixColors(PALETTE.bgHill2, friendColor, 0.25);
+    this.cameras.main.setBackgroundColor(skyColor);
+
     for (let i = 0; i < Math.ceil(cfg.width / 400) + 1; i++) {
-      const hill = this.add.ellipse(i * 400 + 100, cfg.groundY + 60, 500, 220, PALETTE.bgHill1);
+      const hill = this.add.ellipse(i * 400 + 100, cfg.groundY + 60, 500, 220, hill1Color);
       hill.setScrollFactor(0.25);
-      const hill2 = this.add.ellipse(i * 400 + 300, cfg.groundY + 90, 400, 180, PALETTE.bgHill2);
+      const hill2 = this.add.ellipse(i * 400 + 300, cfg.groundY + 90, 400, 180, hill2Color);
       hill2.setScrollFactor(0.45);
     }
     for (let i = 0; i < 24; i++) {
       const star = this.add.circle(Math.random() * cfg.width, Math.random() * (cfg.groundY - 60), 1.6, 0xffffff, 0.6);
       star.setScrollFactor(0.6);
     }
+
+    // Deliberately NOT tinted with friendColor like the sky/hills above --
+    // a sparkle in the same hue as its background nearly disappears, so
+    // this stays a fixed warm palette that reads against any sky tint.
+    createAmbientSparkles(this, {
+      x: 0,
+      y: 30,
+      width: cfg.width,
+      height: cfg.groundY - 90,
+      scrollFactor: 0.7,
+    });
   }
 
   handleEnemyHit(player, enemy) {
