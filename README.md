@@ -13,8 +13,10 @@ her one at a time — a photo, then their birthday wish, first
 impression, where they met, impression now, and a quality she loves
 about her — tapped through at her own pace, with a photo of the two of
 them together at the bottom of the room throughout. The last level is
-a full dragon boss fight; beating it opens a celebration screen with
-everyone together.
+a full dragon boss fight — it swoops down and throws fire to dodge, and
+she shoots back with the same wand from the regular levels while its
+belly is exposed; beating it opens a celebration screen with everyone
+together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming, the fort/
 gate, and the memory room, with plain HTML/CSS for the title, map, and
@@ -117,9 +119,16 @@ dragon fight itself — both of which came up blank/unplayable from the
 same root cause: Phaser auto-starts whichever scene is listed *first* in
 a `scene: [...]` array the moment the game boots, before any real data
 exists, silently crashing it and taking the whole render loop down with
-it. All of these have happened for real during development — this is
-meant to run after any change that touches level generation, physics,
-the boss fight, or scene setup, not just once. See
+it. The dragon fight check drives it through the *real* mechanic (swoop,
+then several real shots), not by calling the hit-handler directly, which
+is what caught the sneakiest bug so far: `physics.add.overlap(group,
+singleObject, cb)` that destroys the group member inside `cb` landed
+exactly one hit, ever, then silently stopped firing for the rest of the
+fight, even though every later shot spawned in the exact right place —
+swapping the argument order to `overlap(singleObject, group, cb)` fixed
+it outright. All of these have happened for real during development —
+this is meant to run after any change that touches level generation,
+physics, the boss fight, or scene setup, not just once. See
 [scripts/check-levels.mjs](scripts/check-levels.mjs).
 
 ## Playing out of order

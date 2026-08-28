@@ -309,22 +309,41 @@ async function checkDragonFight(page, pageErrors) {
     return;
   }
 
+  // Drive it through the real mechanic (swoop -> shoot -> overlap), not by
+  // calling tryHitDragon() directly -- that bypasses the actual hitbox
+  // entirely and would pass even if the weak point were unreachable, which
+  // is exactly the bug being tested for here.
   const result = await page.evaluate(
     () =>
       new Promise((resolve) => {
         const scene = window.__testGame.scene.getScene('BossScene');
-        let hits = 0;
-        function tryHit() {
-          if (scene.finished || hits >= 6) {
-            resolve({ finished: scene.finished, hits });
+        let rounds = 0;
+        function attackRound() {
+          if (scene.finished || rounds >= 5) {
+            resolve({ finished: scene.finished, dragonHP: scene.dragonHP, rounds });
             return;
           }
-          scene.vulnerable = true;
-          scene.tryHitDragon();
-          hits++;
-          setTimeout(tryHit, 150);
+          rounds++;
+          scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
+          scene.player.setFlipX(false);
+          scene.swoop();
+          // swoop's down-tween is 500ms; fire several real shots once it's
+          // in range and stay vulnerable (1400ms window) to land one.
+          setTimeout(() => {
+            let shots = 0;
+            const shootTimer = setInterval(() => {
+              if (scene.finished || !scene.vulnerable || shots >= 4) {
+                clearInterval(shootTimer);
+                setTimeout(attackRound, 1600); // let this swoop fully retract before the next
+                return;
+              }
+              scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
+              scene.shoot();
+              shots++;
+            }, 300);
+          }, 550);
         }
-        tryHit();
+        attackRound();
       })
   );
   await page.waitForTimeout(1200); // winFight()'s own fade-out tween before onVictory fires
@@ -335,9 +354,11 @@ async function checkDragonFight(page, pageErrors) {
   if (newErrors.length) {
     newErrors.forEach((e) => fail(`dragon fight: console error: ${e}`));
   } else if (result.finished && finaleActive) {
-    pass(`dragon fight: defeated in ${result.hits} hits, finale screen shown`);
+    pass(`dragon fight: defeated via real shots in ${result.rounds} swoop(s), finale screen shown`);
   } else {
-    fail(`dragon fight: NOT completable (finished=${result.finished}, finale shown=${finaleActive})`);
+    fail(
+      `dragon fight: NOT completable via real shots (finished=${result.finished}, dragonHP=${result.dragonHP}, finale shown=${finaleActive})`
+    );
   }
 }
 

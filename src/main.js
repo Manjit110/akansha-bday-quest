@@ -203,7 +203,7 @@ function revisitFriend(index) {
 
 function startBoss() {
   bossHpEl.style.display = 'flex';
-  btnShoot.style.display = 'none';
+  btnShoot.style.display = 'flex';
   showScreen('screen-game');
   ensureGame();
   renderHearts(3);
@@ -227,7 +227,11 @@ function startBoss() {
 btnShoot.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   if (!game) return;
-  const scene = game.scene.getScene('LevelScene');
+  // Whichever of these is actually running gets the shot -- LevelScene
+  // during a regular level, BossScene during the dragon fight.
+  const scene = game.scene.getScene('LevelScene').scene.isActive()
+    ? game.scene.getScene('LevelScene')
+    : game.scene.getScene('BossScene');
   if (scene && scene.scene.isActive() && typeof scene.requestShoot === 'function') {
     scene.requestShoot();
   }
