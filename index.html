@@ -50,6 +50,17 @@
       <p id="finale-note" class="finale-note"></p>
     </section>
 
+    <!-- REPLAY-OR-VIEW CHOICE, shown when clicking an already-rescued friend -->
+    <div id="replay-modal" class="modal-backdrop">
+      <div class="modal-card">
+        <button class="modal-close" id="btn-replay-close" aria-label="Close">&times;</button>
+        <div id="replay-modal-avatar" class="modal-avatar"></div>
+        <h3 id="replay-modal-name" class="modal-name"></h3>
+        <button class="btn-primary" id="btn-replay-level">Play Level Again</button>
+        <button class="btn-small" id="btn-view-messages">View Messages</button>
+      </div>
+    </div>
+
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>

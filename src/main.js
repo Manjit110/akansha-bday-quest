@@ -45,6 +45,12 @@ const btnShoot = document.getElementById('btn-shoot');
 const finaleGrid = document.getElementById('finale-grid');
 const finaleNoteEl = document.getElementById('finale-note');
 const confettiLayer = document.getElementById('confetti-layer');
+const replayModal = document.getElementById('replay-modal');
+const replayModalAvatar = document.getElementById('replay-modal-avatar');
+const replayModalName = document.getElementById('replay-modal-name');
+const btnReplayLevel = document.getElementById('btn-replay-level');
+const btnViewMessages = document.getElementById('btn-view-messages');
+const btnReplayClose = document.getElementById('btn-replay-close');
 
 function showScreen(id) {
   screens.forEach((s) => s.classList.toggle('active', s.id === id));
@@ -82,7 +88,7 @@ function renderMap() {
         node.appendChild(initialAvatar(friend, '22px'));
       }
       node.title = `Revisit ${friend.name}`;
-      node.addEventListener('click', () => revisitFriend(i));
+      node.addEventListener('click', () => openReplayModal(i));
     } else if (i === state.unlocked) {
       node.classList.add('current');
       node.textContent = String(i + 1);
@@ -114,6 +120,48 @@ function renderMap() {
   }
   bossNodeWrap.appendChild(bossNode);
 }
+
+// --- replay-or-view modal, shown when clicking an already-rescued friend ---
+let replayIndex = null;
+
+function openReplayModal(index) {
+  replayIndex = index;
+  const friend = friends[index];
+  replayModalAvatar.innerHTML = '';
+  if (friend.photoSolo) {
+    const img = document.createElement('img');
+    img.src = assetUrl(friend.photoSolo);
+    img.alt = friend.name;
+    replayModalAvatar.appendChild(img);
+  } else {
+    replayModalAvatar.appendChild(initialAvatar(friend, '26px'));
+  }
+  replayModalName.textContent = friend.name;
+  replayModal.classList.add('active');
+}
+
+function closeReplayModal() {
+  replayModal.classList.remove('active');
+  replayIndex = null;
+}
+
+btnReplayLevel.addEventListener('click', () => {
+  const index = replayIndex;
+  closeReplayModal();
+  if (index !== null) startLevel(index);
+});
+
+btnViewMessages.addEventListener('click', () => {
+  const index = replayIndex;
+  closeReplayModal();
+  if (index !== null) revisitFriend(index);
+});
+
+btnReplayClose.addEventListener('click', closeReplayModal);
+
+replayModal.addEventListener('click', (e) => {
+  if (e.target === replayModal) closeReplayModal();
+});
 
 // --- hud ---
 function renderHearts(h) {

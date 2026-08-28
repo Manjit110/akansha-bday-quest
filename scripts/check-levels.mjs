@@ -268,7 +268,13 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
 
   await page.click('#btn-start');
   await page.waitForSelector('.map-node.done');
+
+  // Clicking a done node opens a Play Again / View Messages choice rather
+  // than jumping straight into either -- check both paths actually work.
   await page.click('.map-node.done');
+  await page.waitForSelector('#replay-modal.active');
+
+  await page.click('#btn-view-messages');
   await page.waitForTimeout(1200);
 
   const roomActive = await page.evaluate(() => {
@@ -276,13 +282,32 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
     return !!(room && room.scene.isActive());
   });
 
+  if (!roomActive) {
+    pageErrors.splice(before);
+    fail('revisit: "View Messages" never opened the memory room -- screen is blank');
+    return;
+  }
+
+  await page.click('#btn-quit-level');
+  await page.waitForSelector('.map-node.done');
+  await page.click('.map-node.done');
+  await page.waitForSelector('#replay-modal.active');
+
+  await page.click('#btn-replay-level');
+  await page.waitForTimeout(1000);
+
+  const levelActive = await page.evaluate(() => {
+    const scene = window.__testGame && window.__testGame.scene.getScene('LevelScene');
+    return !!(scene && scene.scene.isActive());
+  });
+
   const newErrors = pageErrors.splice(before);
   if (newErrors.length) {
     newErrors.forEach((e) => fail(`revisit: console error: ${e}`));
-  } else if (!roomActive) {
-    fail('revisit: memory room never became active -- screen is blank');
+  } else if (!levelActive) {
+    fail('revisit: "Play Level Again" never started the real level -- screen is blank');
   } else {
-    pass('revisit: memory room opens normally for an already-completed friend');
+    pass('revisit: both "View Messages" and "Play Level Again" work for an already-completed friend');
   }
 }
 

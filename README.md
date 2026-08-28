@@ -86,8 +86,9 @@ npm run dev
 - **The memory room**: [src/game/RevealRoomScene.js](src/game/RevealRoomScene.js)
   — the card order/labels (Birthday Wish, First Impression, etc.) live
   in `buildCards()` there if you want to reorder, rename, or add one.
-  Clicking an already-rescued friend on the map replays just this room
-  (no need to replay the level) via the same scene. The "together" photo
+  Clicking an already-rescued friend on the map opens a small choice —
+  play that friend's level again from the start, or jump straight to
+  this room without replaying it. The "together" photo
   at the bottom uses `photoTogether` once you add one; until then it
   shows a placeholder (two colored initials + a heart) so the spot never
   looks broken. Cards are rounded, cream-colored paper with a soft
