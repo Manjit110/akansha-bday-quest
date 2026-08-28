@@ -227,6 +227,11 @@ html, body {
   font-size: 26px;
   color: #2b1140;
 }
+.modal-avatar.boss {
+  background: linear-gradient(135deg, #4a1942, #7a1f3d);
+  border-color: var(--danger);
+  font-size: 34px;
+}
 .modal-avatar img {
   width: 100%;
   height: 100%;

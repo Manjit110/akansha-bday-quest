@@ -88,7 +88,9 @@ npm run dev
   in `buildCards()` there if you want to reorder, rename, or add one.
   Clicking an already-rescued friend on the map opens a small choice —
   play that friend's level again from the start, or jump straight to
-  this room without replaying it. The "together" photo
+  this room without replaying it. The already-defeated dragon node
+  offers the same choice (replay the dragon fight, or jump to the
+  finale screen). The "together" photo
   at the bottom uses `photoTogether` once you add one; until then it
   shows a placeholder (two colored initials + a heart) so the spot never
   looks broken. Cards are rounded, cream-colored paper with a soft

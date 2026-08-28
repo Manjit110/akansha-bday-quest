@@ -311,6 +311,58 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
   }
 }
 
+// The same Play Again / View Messages choice, for the already-defeated
+// dragon node on the map -- shares the modal and DOM ids with the
+// per-friend version above, keyed by the 'boss' sentinel instead of an
+// index (see openReplayModal() in main.js).
+async function checkBossReplay(page, pageErrors) {
+  console.log('\n== Revisiting the already-defeated dragon (Play Again / View Messages) ==');
+
+  const before = pageErrors.length;
+
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.evaluate((total) => {
+    localStorage.setItem('akansha-quest-progress-v1', JSON.stringify({ unlocked: total, bossDefeated: true }));
+  }, TOTAL_LEVELS);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await page.click('#btn-start');
+  await page.waitForSelector('.boss-node');
+  await page.click('.boss-node');
+  await page.waitForSelector('#replay-modal.active');
+
+  await page.click('#btn-replay-level');
+  await page.waitForTimeout(800);
+
+  const bossActive = await page.evaluate(() => {
+    const scene = window.__testGame && window.__testGame.scene.getScene('BossScene');
+    return !!(scene && scene.scene.isActive());
+  });
+  if (!bossActive) {
+    pageErrors.splice(before);
+    fail('boss replay: "Play Level Again" never started the dragon fight -- screen is blank');
+    return;
+  }
+
+  await page.click('#btn-quit-level');
+  await page.waitForSelector('.boss-node');
+  await page.click('.boss-node');
+  await page.waitForSelector('#replay-modal.active');
+
+  await page.click('#btn-view-messages');
+  await page.waitForTimeout(500);
+  const finaleActive = await page.evaluate(() => document.getElementById('screen-finale').classList.contains('active'));
+
+  const newErrors = pageErrors.splice(before);
+  if (newErrors.length) {
+    newErrors.forEach((e) => fail(`boss replay: console error: ${e}`));
+  } else if (!finaleActive) {
+    fail('boss replay: "View Messages" never showed the finale screen');
+  } else {
+    pass('boss replay: both "Play Level Again" and "View Messages" work for the defeated dragon');
+  }
+}
+
 // Same root cause as above, different symptom: the dragon fight is the
 // other scene that's started directly (never through LevelScene), so it
 // was equally vulnerable to the auto-started LevelScene crashing the game
@@ -483,6 +535,7 @@ async function main() {
     await checkLevelTransition(page);
     await checkRevisitAfterCompletion(page, pageErrors);
     await checkDragonFight(page, pageErrors);
+    await checkBossReplay(page, pageErrors);
     await checkBossFightsAndCompletion(page);
 
     if (pageErrors.length) {

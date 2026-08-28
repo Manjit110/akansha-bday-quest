@@ -112,7 +112,7 @@ function renderMap() {
   } else if (state.bossDefeated) {
     bossNode.textContent = '🎉';
     bossNode.title = 'Relive the celebration';
-    bossNode.addEventListener('click', showFinale);
+    bossNode.addEventListener('click', () => openReplayModal('boss'));
   } else {
     bossNode.textContent = '🐉';
     bossNode.title = 'Face the dragon';
@@ -121,22 +121,29 @@ function renderMap() {
   bossNodeWrap.appendChild(bossNode);
 }
 
-// --- replay-or-view modal, shown when clicking an already-rescued friend ---
+// --- replay-or-view modal, shown when clicking an already-rescued friend
+// or the already-defeated dragon ---
 let replayIndex = null;
 
 function openReplayModal(index) {
   replayIndex = index;
-  const friend = friends[index];
   replayModalAvatar.innerHTML = '';
-  if (friend.photoSolo) {
-    const img = document.createElement('img');
-    img.src = assetUrl(friend.photoSolo);
-    img.alt = friend.name;
-    replayModalAvatar.appendChild(img);
+  replayModalAvatar.classList.toggle('boss', index === 'boss');
+  if (index === 'boss') {
+    replayModalAvatar.textContent = '🐉';
+    replayModalName.textContent = 'The Dragon';
   } else {
-    replayModalAvatar.appendChild(initialAvatar(friend, '26px'));
+    const friend = friends[index];
+    if (friend.photoSolo) {
+      const img = document.createElement('img');
+      img.src = assetUrl(friend.photoSolo);
+      img.alt = friend.name;
+      replayModalAvatar.appendChild(img);
+    } else {
+      replayModalAvatar.appendChild(initialAvatar(friend, '26px'));
+    }
+    replayModalName.textContent = friend.name;
   }
-  replayModalName.textContent = friend.name;
   replayModal.classList.add('active');
 }
 
@@ -148,13 +155,15 @@ function closeReplayModal() {
 btnReplayLevel.addEventListener('click', () => {
   const index = replayIndex;
   closeReplayModal();
-  if (index !== null) startLevel(index);
+  if (index === 'boss') startBoss();
+  else if (index !== null) startLevel(index);
 });
 
 btnViewMessages.addEventListener('click', () => {
   const index = replayIndex;
   closeReplayModal();
-  if (index !== null) revisitFriend(index);
+  if (index === 'boss') showFinale();
+  else if (index !== null) revisitFriend(index);
 });
 
 btnReplayClose.addEventListener('click', closeReplayModal);
