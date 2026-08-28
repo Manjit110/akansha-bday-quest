@@ -386,6 +386,22 @@ async function checkDragonFight(page, pageErrors) {
     return;
   }
 
+  // Fireballs must be thrown *at* the player (horizontal), not dropped
+  // straight down with a token wobble -- a previous version launched them
+  // with velocity (~0, 260), almost pure vertical fall.
+  const fireball = await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('BossScene');
+    scene.player.setPosition(scene.dragonGroup.x - 300, scene.player.y);
+    scene.spawnFireball();
+    const fb = scene.fireballs.getChildren().slice(-1)[0];
+    return { vx: fb.body.velocity.x, vy: fb.body.velocity.y };
+  });
+  if (Math.abs(fireball.vx) < 100 || Math.abs(fireball.vy) > 40) {
+    fail(`dragon fight: fireball velocity (${fireball.vx}, ${fireball.vy}) isn't a horizontal throw at the player`);
+  } else {
+    pass(`dragon fight: fireball thrown horizontally at the player (vx=${fireball.vx}, vy=${fireball.vy})`);
+  }
+
   // Drive it through the real mechanic (swoop -> shoot -> overlap), not by
   // calling tryHitDragon() directly -- that bypasses the actual hitbox
   // entirely and would pass even if the weak point were unreachable, which

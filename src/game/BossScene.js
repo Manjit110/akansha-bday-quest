@@ -224,12 +224,17 @@ export default class BossScene extends Phaser.Scene {
 
   spawnFireball() {
     if (this.finished) return;
-    const fx = this.dragonGroup.x + (Math.random() - 0.5) * 60;
-    const fb = this.add.circle(fx, this.dragonGroup.y + 20, 9, PALETTE.fireball);
+    // Aimed at the player and fired sideways, matching the mini-boss
+    // fireballs in the regular levels (see LevelScene's bossThrow) --
+    // this used to launch with velocity (~0, 260), which is almost pure
+    // downward drop with a tiny horizontal wobble, not a throw at her.
+    const dir = this.player.x < this.dragonGroup.x ? -1 : 1;
+    const fb = this.add.circle(this.dragonGroup.x, this.dragonGroup.y + 4, 9, PALETTE.fireball);
+    fb.setStrokeStyle(2, 0xffd166, 0.8);
     this.physics.add.existing(fb);
-    fb.body.setAllowGravity(false);
-    fb.body.setVelocity((Math.random() - 0.5) * 60, 260);
     this.fireballs.add(fb);
+    fb.body.setAllowGravity(false);
+    fb.body.setVelocityX(dir * 210);
     this.time.delayedCall(2600, () => fb.destroy());
   }
 
