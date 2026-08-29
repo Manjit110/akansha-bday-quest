@@ -363,10 +363,13 @@ async function checkBossReplay(page, pageErrors) {
   }
 }
 
-// Same root cause as above, different symptom: the dragon fight is the
-// other scene that's started directly (never through LevelScene), so it
-// was equally vulnerable to the auto-started LevelScene crashing the game
-// loop out from under it -- "no dragon, level not passable".
+// The dragon fight is a scene started directly (never through LevelScene),
+// so it was vulnerable to the same auto-started-LevelScene crash that broke
+// revisit-after-completion -- "no dragon, level not passable". Also covers
+// the finale redesign: the full rescued squad firing from shelves, the
+// jail cell, and the fight now being fully winnable with zero player
+// input (dragonHP=10, each pip needing several hits -- see
+// HITS_PER_STAGE_* / registerHit() in BossScene.js).
 async function checkDragonFight(page, pageErrors) {
   console.log('\n== Dragon boss fight (must render and be winnable) ==');
 
@@ -402,56 +405,98 @@ async function checkDragonFight(page, pageErrors) {
     pass(`dragon fight: fireball thrown horizontally at the player (vx=${fireball.vx}, vy=${fireball.vy})`);
   }
 
-  // Drive it through the real mechanic (swoop -> shoot -> overlap), not by
-  // calling tryHitDragon() directly -- that bypasses the actual hitbox
-  // entirely and would pass even if the weak point were unreachable, which
-  // is exactly the bug being tested for here.
+  // The whole rescued squad should be standing by, plus the jail cell.
+  const setup = await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('BossScene');
+    return {
+      allyCount: scene.allies ? scene.allies.length : 0,
+      jailBarCount: scene.jailBars ? scene.jailBars.length : 0,
+      dragonHP: scene.dragonHP,
+    };
+  });
+  if (setup.allyCount !== TOTAL_LEVELS || setup.jailBarCount < 1) {
+    fail(`dragon fight: finale not set up right (squad=${setup.allyCount}/${TOTAL_LEVELS}, jail bars=${setup.jailBarCount})`);
+  } else {
+    pass(`dragon fight: full rescued squad (${setup.allyCount}) and jail cell are on screen, dragonHP=${setup.dragonHP}`);
+  }
+
+  // The squad's volley is a real background timer, not just a method she
+  // can call -- confirm it lands damage on its own with the page just
+  // sitting there, exactly like a player who never touches a key. The
+  // first HP pip needs 4-5 hits landing roughly 480ms apart (~860ms to the
+  // first, then up to 4 more), so this needs real margin above that worst
+  // case, not just the average.
+  await page.waitForTimeout(6000);
+  const afterWait = await page.evaluate(() => window.__testGame.scene.getScene('BossScene').dragonHP);
+  if (afterWait >= setup.dragonHP) {
+    fail(`dragon fight: no damage landed after 6s of real time with zero input (dragonHP still ${afterWait})`);
+  } else {
+    pass(`dragon fight: automated squad volley lands real damage over time with no input (dragonHP ${setup.dragonHP} -> ${afterWait})`);
+  }
+
+  // The player's own shot should still count too -- same registerHit()
+  // path as the squad, just gated behind the weak point being exposed.
+  const manualHit = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const scene = window.__testGame.scene.getScene('BossScene');
+        const before = scene.hitsUntilNextStage;
+        scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
+        scene.player.setFlipX(false);
+        scene.swoop();
+        setTimeout(() => {
+          scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
+          scene.shoot();
+          setTimeout(() => resolve({ before, after: scene.hitsUntilNextStage, dragonHP: scene.dragonHP }), 300);
+        }, 550);
+      })
+  );
+  if (manualHit.after >= manualHit.before && manualHit.dragonHP >= setup.dragonHP) {
+    fail(`dragon fight: player's own shot did not register (hitsUntilNextStage ${manualHit.before} -> ${manualHit.after})`);
+  } else {
+    pass('dragon fight: player\'s own weak-point shot still contributes damage');
+  }
+
+  // Now confirm the fight can always actually finish, and that beating it
+  // opens the jail cell -- driven directly (like the mini-boss checks
+  // below) rather than waiting out the ~25s the real timer takes, since
+  // the timer itself was already exercised by the 3s check above.
   const result = await page.evaluate(
     () =>
       new Promise((resolve) => {
         const scene = window.__testGame.scene.getScene('BossScene');
-        let rounds = 0;
-        function attackRound() {
-          if (scene.finished || rounds >= 5) {
-            resolve({ finished: scene.finished, dragonHP: scene.dragonHP, rounds });
+        let calls = 0;
+        function tick() {
+          if (scene.finished || calls >= 400) {
+            resolve({ finished: scene.finished, calls, dragonHP: scene.dragonHP });
             return;
           }
-          rounds++;
-          scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
-          scene.player.setFlipX(false);
-          scene.swoop();
-          // swoop's down-tween is 500ms; fire several real shots once it's
-          // in range and stay vulnerable (1400ms window) to land one.
-          setTimeout(() => {
-            let shots = 0;
-            const shootTimer = setInterval(() => {
-              if (scene.finished || !scene.vulnerable || shots >= 4) {
-                clearInterval(shootTimer);
-                setTimeout(attackRound, 1600); // let this swoop fully retract before the next
-                return;
-              }
-              scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
-              scene.shoot();
-              shots++;
-            }, 300);
-          }, 550);
+          scene.allyVolley();
+          calls++;
+          setTimeout(tick, 40);
         }
-        attackRound();
+        tick();
       })
   );
-  await page.waitForTimeout(1200); // winFight()'s own fade-out tween before onVictory fires
+  await page.waitForTimeout(1600); // winFight()'s fade + jail-open beat + delayed onVictory
 
   const finaleActive = await page.evaluate(() => document.getElementById('screen-finale').classList.contains('active'));
+  const jailOpened = await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('BossScene');
+    return scene.jailBars.every((b) => b.alpha < 0.05);
+  });
 
   const newErrors = pageErrors.splice(before);
   if (newErrors.length) {
     newErrors.forEach((e) => fail(`dragon fight: console error: ${e}`));
-  } else if (result.finished && finaleActive) {
-    pass(`dragon fight: defeated via real shots in ${result.rounds} swoop(s), finale screen shown`);
+  } else if (!result.finished) {
+    fail(`dragon fight: NOT completable (${result.calls} volleys fired, dragonHP=${result.dragonHP} still > 0)`);
+  } else if (!jailOpened) {
+    fail('dragon fight: jail cell bars never opened after victory');
+  } else if (!finaleActive) {
+    fail('dragon fight: finale screen never appeared after victory');
   } else {
-    fail(
-      `dragon fight: NOT completable via real shots (finished=${result.finished}, dragonHP=${result.dragonHP}, finale shown=${finaleActive})`
-    );
+    pass(`dragon fight: fully winnable (${result.calls} volleys), jail cell opens, finale screen shown`);
   }
 }
 

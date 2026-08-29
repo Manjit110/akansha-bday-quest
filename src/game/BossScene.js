@@ -3,6 +3,7 @@ import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './h
 import { createFaceOverlay } from './faceOverlay.js';
 import { ensureWandTexture } from './weapon.js';
 import { player as playerConfig } from '../data/player.js';
+import { friends } from '../data/friends.js';
 import { assetUrl } from '../assetPath.js';
 
 const W = 960;
@@ -19,7 +20,13 @@ const PALETTE = {
   fireball: 0xff9f45,
 };
 
-export const DRAGON_HP = 3;
+// Displayed HP (the pips shown in the HUD). Each pip actually takes several
+// hits to bring down -- see HITS_PER_STAGE_* -- so with every rescued
+// friend now also firing on the dragon (see buildAllySquad), the fight
+// still has real duration instead of ending in a couple of seconds.
+export const DRAGON_HP = 10;
+const HITS_PER_STAGE_MIN = 4;
+const HITS_PER_STAGE_MAX = 5;
 const DRAGON_X = 740;
 const DRAGON_HIGH_Y = 130;
 // Low enough that its weak point lines up with a standing player's shoot
@@ -32,6 +39,29 @@ const DRAGON_LOW_Y = 400;
 // weak-point circle stay lined up.
 const WEAK_OFFSET_Y = 20;
 const SHOOT_COOLDOWN = 380;
+// How often the next friend in the squad takes a shot. Deterministic and
+// not gated behind the dragon being "vulnerable" -- unlike the player's own
+// weak-point shots, the squad's volley is what guarantees the fight always
+// finishes even if she never fires a single shot herself.
+const ALLY_FIRE_INTERVAL = 480;
+const JAIL_X = 480;
+const JAIL_Y = 84;
+const JAIL_W = 118;
+const JAIL_H = 96;
+
+// Two rows of shelves spanning the arena width, kept below the jail cell
+// (JAIL_Y=84) so nobody's standing in front of Akansha's own photo.
+function allyLayout(index, total) {
+  const perRow = Math.ceil(total / 2);
+  const row = index < perRow ? 0 : 1;
+  const col = index < perRow ? index : index - perRow;
+  const rowCount = row === 0 ? perRow : total - perRow;
+  const marginX = 55;
+  const usableW = W - marginX * 2;
+  const x = marginX + (col + 0.5) * (usableW / rowCount);
+  const y = row === 0 ? 150 : 212;
+  return { x, y };
+}
 
 export default class BossScene extends Phaser.Scene {
   constructor() {
@@ -42,6 +72,8 @@ export default class BossScene extends Phaser.Scene {
     this.callbacks = data.callbacks;
     this.hearts = 3;
     this.dragonHP = DRAGON_HP;
+    this.hitsUntilNextStage = Phaser.Math.Between(HITS_PER_STAGE_MIN, HITS_PER_STAGE_MAX);
+    this.allyTurn = 0;
     this.invulnerable = false;
     this.vulnerable = false;
     this.finished = false;
@@ -54,6 +86,16 @@ export default class BossScene extends Phaser.Scene {
     if (playerConfig.facePhoto && !this.textures.exists('face-player')) {
       this.load.image('face-player', assetUrl(playerConfig.facePhoto));
     }
+    // The whole rescued squad shows up for the finale (see
+    // buildAllySquad), so their faces need loading here too -- most are
+    // already cached from playing through their own levels, but a fresh
+    // session (or the ?level=boss cheat code) hits this scene directly.
+    friends.forEach((f) => {
+      const key = `face-friend-${f.id}`;
+      if (f.photoSolo && !this.textures.exists(key)) {
+        this.load.image(key, assetUrl(f.photoSolo));
+      }
+    });
   }
 
   create() {
@@ -116,11 +158,131 @@ export default class BossScene extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE,F');
 
+    this.buildJailCell();
+    this.buildAllySquad();
+
     this.callbacks.onHeartsChange(this.hearts);
     this.callbacks.onBossStart(DRAGON_HP);
 
     this.swoopTimer = this.time.addEvent({ delay: 4200, callback: () => this.swoop(), loop: true });
     this.fireTimer = this.time.addEvent({ delay: 950, callback: () => this.spawnFireball(), loop: true });
+    this.allyFireTimer = this.time.addEvent({ delay: ALLY_FIRE_INTERVAL, callback: () => this.allyVolley(), loop: true });
+  }
+
+  // Akansha's cage, held above the fight throughout -- what everyone's
+  // actually here for. Bars swing open in openJailCell() once the dragon
+  // falls. Reuses her own face photo (playerConfig.facePhoto), the same
+  // one she wears during this fight, since it's the same person either way.
+  buildJailCell() {
+    this.add.rectangle(JAIL_X, JAIL_Y, JAIL_W, JAIL_H, 0x1a0f2e, 0.9).setStrokeStyle(2, 0x3a2a5c, 0.9);
+
+    const photoRadius = JAIL_H / 2 - 14;
+    if (playerConfig.facePhoto && this.textures.exists('face-player')) {
+      const photo = createFaceOverlay(this, { textureKey: 'face-player', radius: photoRadius });
+      photo.setPosition(JAIL_X, JAIL_Y);
+    } else {
+      this.add.circle(JAIL_X, JAIL_Y, photoRadius, 0xffd166);
+      this.add
+        .text(JAIL_X, JAIL_Y, 'A', { fontFamily: 'Press Start 2P, monospace', fontSize: '24px', color: '#2b1140' })
+        .setOrigin(0.5);
+    }
+
+    this.jailBars = [];
+    const barCount = 6;
+    for (let i = 0; i < barCount; i++) {
+      const bx = JAIL_X - JAIL_W / 2 + 10 + i * ((JAIL_W - 20) / (barCount - 1));
+      const bar = this.add.rectangle(bx, JAIL_Y, 5, JAIL_H - 8, 0x2a1f3a);
+      bar.setStrokeStyle(1, 0x140b28, 0.7);
+      this.jailBars.push(bar);
+    }
+    this.add.rectangle(JAIL_X, JAIL_Y - JAIL_H / 2 + 3, JAIL_W, 6, 0x140b28);
+    this.add.rectangle(JAIL_X, JAIL_Y + JAIL_H / 2 - 3, JAIL_W, 6, 0x140b28);
+
+    this.jailGlow = this.add.circle(JAIL_X, JAIL_Y, JAIL_H / 2, 0xffd166, 0);
+
+    this.add
+      .text(JAIL_X, JAIL_Y + JAIL_H / 2 + 16, 'Akansha', {
+        fontFamily: 'Quicksand, sans-serif',
+        fontSize: '12px',
+        fontStyle: '700',
+        color: '#c9b8e8',
+      })
+      .setOrigin(0.5);
+  }
+
+  // The full rescued squad, perched on little floating shelves, taking
+  // automated potshots at the dragon throughout the fight (see
+  // allyVolley) -- this is what guarantees the fight finishes even if she
+  // never fires a single shot herself.
+  buildAllySquad() {
+    this.allies = friends.map((friend, i) => this.buildAlly(friend, allyLayout(i, friends.length)));
+  }
+
+  buildAlly(friend, pos) {
+    const { x, y } = pos;
+    const color = Phaser.Display.Color.HexStringToColor(friend.color).color;
+    this.add.rectangle(x, y + 17, 38, 6, 0x241542, 0.9).setStrokeStyle(1, 0x140b28, 0.6);
+
+    const photoKey = `face-friend-${friend.id}`;
+    if (friend.photoSolo && this.textures.exists(photoKey)) {
+      const overlay = createFaceOverlay(this, { textureKey: photoKey, radius: 14 });
+      overlay.setPosition(x, y);
+    } else {
+      this.add.circle(x, y, 14, color);
+      this.add
+        .text(x, y, friend.name.trim().charAt(0).toUpperCase() || '?', {
+          fontFamily: 'Press Start 2P, monospace',
+          fontSize: '11px',
+          color: '#2b1140',
+        })
+        .setOrigin(0.5);
+    }
+
+    const ring = this.add.circle(x, y, 14, 0x000000, 0).setStrokeStyle(2, color, 0.9);
+    return { x, y, color, ring };
+  }
+
+  // Fires from the next friend in the squad, round-robin. Purely a visual
+  // tween to the dragon's current position, not physics/overlap-based --
+  // damage lands deterministically when it arrives (see registerHit), so
+  // the fight's pace never depends on collision timing.
+  allyVolley() {
+    if (this.finished || !this.allies || !this.allies.length) return;
+    const ally = this.allies[this.allyTurn % this.allies.length];
+    this.allyTurn++;
+
+    this.tweens.add({ targets: ally.ring, scale: 1.6, alpha: 0.25, duration: 140, yoyo: true });
+
+    const proj = this.add.circle(ally.x, ally.y, 5, ally.color);
+    this.tweens.add({
+      targets: proj,
+      x: this.dragonGroup.x,
+      y: this.dragonGroup.y + WEAK_OFFSET_Y,
+      duration: 380,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        proj.destroy();
+        this.registerHit();
+      },
+    });
+  }
+
+  // Bars swing apart and the cage glows -- called once from winFight(),
+  // right as the dragon starts its own fade-out.
+  openJailCell() {
+    if (!this.jailBars) return;
+    this.jailBars.forEach((bar, i) => {
+      this.tweens.add({
+        targets: bar,
+        x: bar.x + (i % 2 === 0 ? -34 : 34),
+        alpha: 0,
+        duration: 700,
+        ease: 'Back.easeIn',
+      });
+    });
+    if (this.jailGlow) {
+      this.tweens.add({ targets: this.jailGlow, alpha: 0.8, scale: 1.35, duration: 450, yoyo: true, repeat: 1 });
+    }
   }
 
   // A small composite dragon (container of primitives) in the same chibi/
@@ -267,16 +429,26 @@ export default class BossScene extends Phaser.Scene {
     // own 1400ms timeout must not *also* fire later and retract the dragon
     // a second time (see swoop()).
     if (this.swoopCloseTimer) this.swoopCloseTimer.remove(false);
+    this.registerHit();
+    // registerHit() may have just called winFight() (dragonHP hit 0) --
+    // don't also retract a dragon that's already fading out.
+    if (!this.finished) this.retractDragon();
+  }
+
+  // Shared by the player's own weak-point shots and the squad's automated
+  // volley (see allyVolley) -- each hit only chips at a fine-grained
+  // counter, and the HUD's displayed HP pip only drops every 4-5 hits, so
+  // 19 friends is what actually finishes this fight, not a single lucky
+  // shot.
+  registerHit() {
+    if (this.finished) return;
+    this.tweens.add({ targets: this.dragonGroup, alpha: 0.55, duration: 70, yoyo: true });
+    this.hitsUntilNextStage -= 1;
+    if (this.hitsUntilNextStage > 0) return;
+    this.hitsUntilNextStage = Phaser.Math.Between(HITS_PER_STAGE_MIN, HITS_PER_STAGE_MAX);
     this.dragonHP -= 1;
     this.callbacks.onDragonHit(this.dragonHP);
-
-    this.tweens.add({ targets: this.dragonGroup, alpha: 0.3, duration: 100, yoyo: true, repeat: 3 });
-
-    if (this.dragonHP <= 0) {
-      this.winFight();
-    } else {
-      this.retractDragon();
-    }
+    if (this.dragonHP <= 0) this.winFight();
   }
 
   damagePlayer() {
@@ -304,14 +476,19 @@ export default class BossScene extends Phaser.Scene {
     this.finished = true;
     this.swoopTimer.remove();
     this.fireTimer.remove();
+    this.allyFireTimer.remove();
     this.fireballs.clear(true, true);
+    this.openJailCell();
     this.tweens.add({
       targets: [this.dragonGroup, this.weakPoint],
       alpha: 0,
       scale: 0.6,
       duration: 900,
       ease: 'Back.easeIn',
-      onComplete: () => this.callbacks.onVictory(),
+      // A short beat after the dragon's own fade so she gets to see the
+      // cage actually open, rather than cutting to the finale screen
+      // mid-animation.
+      onComplete: () => this.time.delayedCall(600, () => this.callbacks.onVictory()),
     });
   }
 

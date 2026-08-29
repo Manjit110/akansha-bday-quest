@@ -13,10 +13,14 @@ her one at a time — a photo, then their birthday wish, first
 impression, where they met, impression now, and a quality she loves
 about her — tapped through at her own pace, with a photo of the two of
 them together at the bottom of the room throughout. The last level is
-a full dragon boss fight — it swoops down and throws fire to dodge, and
-she shoots back with the same wand from the regular levels while its
-belly is exposed; beating it opens a celebration screen with everyone
-together.
+a full dragon boss fight for Akansha's own cage, held above the arena
+throughout — every rescued friend shows up too, perched on floating
+shelves around the fight, firing on the dragon automatically the whole
+time. It swoops down and throws fire to dodge, and she can shoot back
+with the same wand from the regular levels while its belly is exposed,
+but the squad's own volley alone is enough to finish the fight even if
+she never fires a shot. Defeating it swings the cage open and opens a
+celebration screen with everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming, the fort/
 gate, and the memory room, with plain HTML/CSS for the title, map, and
@@ -47,11 +51,12 @@ npm run dev
   fall back to a colored placeholder/initial. `photoSolo` also becomes
   that friend's face in-game (see below), so it pulls double duty.
 - **Akansha's own photo**: [src/data/player.js](src/data/player.js) —
-  set `facePhoto` to a solo photo of her and it becomes her face during
-  the dragon boss fight (the one level that isn't about a specific
-  friend). Leave `null` to keep the drawn placeholder face. During the
-  regular levels the character you control instead wears *that level's
-  friend's* face.
+  set `facePhoto` to a solo photo of her and it becomes both her face
+  during the dragon boss fight (the one level that isn't about a specific
+  friend) and the portrait behind bars in the jail cell held above that
+  same fight. Leave `null` to keep the drawn placeholder for both. During
+  the regular levels the character you control instead wears *that
+  level's friend's* face.
 - **Finale message**: `finaleNote` at the bottom of
   [src/data/friends.js](src/data/friends.js) — one closing message shown
   after the dragon fight.
@@ -129,9 +134,13 @@ singleObject, cb)` that destroys the group member inside `cb` landed
 exactly one hit, ever, then silently stopped firing for the rest of the
 fight, even though every later shot spawned in the exact right place —
 swapping the argument order to `overlap(singleObject, group, cb)` fixed
-it outright. All of these have happened for real during development —
-this is meant to run after any change that touches level generation,
-physics, the boss fight, or scene setup, not just once. See
+it outright. It also confirms the finale specifically: the full rescued
+squad and jail cell are actually on screen, the squad's automated volley
+lands real damage over several real seconds with zero simulated input
+(not just when a test calls a method directly), and the fight still
+finishes and opens the cage. All of these have happened for real during
+development — this is meant to run after any change that touches level
+generation, physics, the boss fight, or scene setup, not just once. See
 [scripts/check-levels.mjs](scripts/check-levels.mjs).
 
 ## Playing out of order
