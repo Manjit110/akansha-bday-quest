@@ -24,9 +24,13 @@ and opens a celebration screen with everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming, the fort/
 gate, and the memory room, with plain HTML/CSS for the title, map, and
-finale screens. Fully static — no backend, progress is saved to the
-browser's `localStorage` so she can close the tab and pick up where she
-left off.
+finale screens. Fully static — no server of its own. Whoever's playing
+types their name first, and progress from then on is saved under that
+exact name, so several friends can each play through on the same shared
+link (or the same device, passed around) and keep separate progress —
+saved to Supabase if you've set one up (see below), always also cached in
+the browser's `localStorage` either way so a flaky connection doesn't
+cost anyone their progress.
 
 ## Setup
 
@@ -113,6 +117,50 @@ npm run dev
   deliberately kept to a fixed warm palette rather than tinted the same
   way — a sparkle the same hue as its background disappears.
 
+## Saving progress (Supabase)
+
+Progress works fine with zero setup — it just stays local to whatever
+browser each person played in (keyed by the name they typed, via
+[src/progressStore.js](src/progressStore.js)). To make it sync across
+devices (so she can start on her phone and finish on a laptop under the
+same name), set up a free [Supabase](https://supabase.com) project:
+
+1. Create a project at supabase.com, then open its SQL editor and run:
+
+   ```sql
+   create table if not exists progress (
+     name text primary key,
+     unlocked int4 not null default 0,
+     boss_defeated boolean not null default false,
+     updated_at timestamptz not null default now()
+   );
+
+   alter table progress enable row level security;
+
+   create policy "anyone can read progress" on progress
+     for select using (true);
+
+   create policy "anyone can insert progress" on progress
+     for insert with check (true);
+
+   create policy "anyone can update progress" on progress
+     for update using (true);
+   ```
+
+   (Wide-open policies are fine here — this is birthday-game progress for
+   a small trusted group, not sensitive data, and the alternative is
+   running your own backend just to gate it. Tighten them if you'd
+   rather.)
+
+2. In the project's **Settings → API** page, copy the **Project URL** and
+   the **anon public** key.
+3. Paste both into [src/data/supabaseConfig.js](src/data/supabaseConfig.js).
+   This key is meant to be public/client-side (that's what the policies
+   above are for), so it's fine to commit.
+4. Rebuild/redeploy. Leave both values empty to keep progress local-only —
+   the game works exactly the same either way, it just won't sync across
+   devices for the same name without this.
+
 ## Testing
 
 `npm test` builds the project, serves it, and drives it with a real
@@ -138,26 +186,38 @@ it outright. It also confirms the finale specifically: the full rescued
 squad and jail cell are actually on screen, the squad's automated volley
 lands real damage over several real seconds with zero simulated input
 (not just when a test calls a method directly), and the fight still
-finishes and opens the cage. All of these have happened for real during
-development — this is meant to run after any change that touches level
-generation, physics, the boss fight, or scene setup, not just once. See
+finishes and opens the cage. It also drives the name-entry gate itself —
+an empty name is rejected, finishing a level actually saves under that
+exact name, returning as that same name restores it, a different name on
+the same browser gets its own fresh progress rather than inheriting
+someone else's, and the "Akansha" unlock code (see below) actually opens
+every level and each opened level actually starts. All of these have
+happened for real during development — this is meant to run after any
+change that touches level generation, physics, the boss fight, name
+entry/progress, or scene setup, not just once. See
 [scripts/check-levels.mjs](scripts/check-levels.mjs).
 
 ## Playing out of order
 
-Progression is normally locked level-by-level, but you can jump straight
-to any level (or the dragon fight) without playing the ones before it —
-useful for previewing or testing. Open the game with `?level=N` in the
-URL (N is the number shown on the map, 1 through however many friends
-there are) or `?level=boss`, e.g.:
+Two ways to skip ahead, for different purposes:
 
-```
-https://<username>.github.io/<repo-name>/?level=7
-https://<username>.github.io/<repo-name>/?level=boss
-```
+- **In-game unlock code**: on the map screen, "Have a code?" reveals a
+  code field. Entering `Akansha` opens every level for that session
+  without needing to have earned it yet (shown with a dashed teal
+  border), so she — or you, while testing — can jump around freely. It's
+  session-only, not saved, and doesn't touch anyone's real progress.
+- **URL preview shortcut**: open the game with `?level=N` in the URL (N
+  is the number shown on the map, 1 through however many friends there
+  are) or `?level=boss`, e.g.:
 
-This doesn't touch her saved progress — it's just a different starting
-point, not a shortcut through a level's own content.
+  ```
+  https://<username>.github.io/<repo-name>/?level=7
+  https://<username>.github.io/<repo-name>/?level=boss
+  ```
+
+  This skips the name screen entirely and doesn't save progress under
+  anyone's name — it's a raw preview shortcut, useful when you just want
+  to look at a specific level without it becoming part of anyone's save.
 
 ## Deploy to GitHub Pages
 

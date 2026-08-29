@@ -2,11 +2,13 @@ import Phaser from 'phaser';
 import './style.css';
 import { friends, finaleNote } from './data/friends.js';
 import { assetUrl } from './assetPath.js';
+import { loadProgress, saveProgress } from './progressStore.js';
 import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
 import RevealRoomScene from './game/RevealRoomScene.js';
 
-const STORAGE_KEY = 'akansha-quest-progress-v1';
+const LAST_NAME_KEY = 'akansha-quest-player-name';
+const UNLOCK_CODE = 'akansha';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];
 
 // Canvas text (used throughout the Phaser scenes) doesn't wait for webfonts
@@ -17,26 +19,28 @@ if (document.fonts) {
   document.fonts.load('600 20px Caveat').catch(() => {});
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    /* ignore corrupted storage */
-  }
-  return { unlocked: 0, bossDefeated: false };
-}
-
-const state = loadState();
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+// Progress is per-name (see progressStore.js) so several friends can each
+// play through on the same shared link and keep separate progress. `state`
+// holds whoever is currently playing; `currentName` is null until a name
+// has actually been submitted (e.g. before the name screen, or when a
+// level was opened via the ?level= preview cheat code).
+let state = { unlocked: 0, bossDefeated: false };
+let currentName = null;
+// "Have a code?" on the map screen -- lets her open any level without
+// having earned it yet, session-only (not saved). Independent of the
+// ?level= URL cheat code below, which is a raw preview shortcut.
+let cheatUnlocked = false;
 
 // --- DOM refs ---
 const screens = document.querySelectorAll('.screen');
 const btnStart = document.getElementById('btn-start');
+const nameForm = document.getElementById('name-form');
+const nameInput = document.getElementById('name-input');
+const nameError = document.getElementById('name-error');
+const btnNameContinue = document.getElementById('btn-name-continue');
 const mapPath = document.getElementById('map-path');
+const playerNameTag = document.getElementById('player-name-tag');
+const btnSwitchPlayer = document.getElementById('btn-switch-player');
 const bossNodeWrap = document.getElementById('boss-node-wrap');
 const heartsEl = document.getElementById('hearts');
 const bossHpEl = document.getElementById('boss-hp');
@@ -51,9 +55,26 @@ const replayModalName = document.getElementById('replay-modal-name');
 const btnReplayLevel = document.getElementById('btn-replay-level');
 const btnViewMessages = document.getElementById('btn-view-messages');
 const btnReplayClose = document.getElementById('btn-replay-close');
+const btnCodeToggle = document.getElementById('btn-code-toggle');
+const codeForm = document.getElementById('code-form');
+const codeInput = document.getElementById('code-input');
+const codeError = document.getElementById('code-error');
 
 function showScreen(id) {
   screens.forEach((s) => s.classList.toggle('active', s.id === id));
+}
+
+// Wherever the game returns to "home" (quitting a level, finishing one,
+// closing the finale) -- the map if we know who's playing, otherwise the
+// name screen, since there's no per-name progress to show without one
+// (e.g. she arrived via the ?level= preview cheat code with no name yet).
+function goHome() {
+  if (currentName) {
+    renderMap();
+    showScreen('screen-map');
+  } else {
+    showScreen('screen-name');
+  }
 }
 
 function initialAvatar(friend, sizePx) {
@@ -73,6 +94,7 @@ function initialAvatar(friend, sizePx) {
 
 // --- map screen ---
 function renderMap() {
+  playerNameTag.textContent = currentName || '';
   mapPath.innerHTML = '';
   friends.forEach((friend, i) => {
     const node = document.createElement('div');
@@ -94,6 +116,11 @@ function renderMap() {
       node.textContent = String(i + 1);
       node.title = 'Play this level';
       node.addEventListener('click', () => startLevel(i));
+    } else if (cheatUnlocked) {
+      node.classList.add('cheat-open');
+      node.textContent = String(i + 1);
+      node.title = `Play ${friend.name}'s level`;
+      node.addEventListener('click', () => startLevel(i));
     } else {
       node.classList.add('locked');
       node.textContent = '🔒';
@@ -104,7 +131,7 @@ function renderMap() {
   bossNodeWrap.innerHTML = '';
   const bossNode = document.createElement('div');
   bossNode.className = 'boss-node';
-  const allUnlocked = state.unlocked >= friends.length;
+  const allUnlocked = state.unlocked >= friends.length || cheatUnlocked;
   if (!allUnlocked) {
     bossNode.classList.add('locked');
     bossNode.textContent = '🐉';
@@ -214,6 +241,13 @@ function ensureGame() {
   return game;
 }
 
+// Only persists if someone has actually been identified -- playing a
+// level via the raw ?level= preview cheat code with no name chosen yet
+// intentionally doesn't touch anyone's saved progress.
+function persistProgress() {
+  if (currentName) saveProgress(currentName, state);
+}
+
 function startLevel(index) {
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'flex';
@@ -229,11 +263,10 @@ function startLevel(index) {
       onHeartsChange: renderHearts,
       onComplete: (idx) => {
         state.unlocked = Math.max(state.unlocked, idx + 1);
-        saveState();
+        persistProgress();
         game.scene.stop('RevealRoomScene');
         game.scene.stop('LevelScene');
-        showScreen('screen-map');
-        renderMap();
+        goHome();
       },
     },
   });
@@ -251,8 +284,7 @@ function revisitFriend(index) {
     callbacks: {
       onDone: () => {
         game.scene.stop('RevealRoomScene');
-        showScreen('screen-map');
-        renderMap();
+        goHome();
       },
     },
   });
@@ -272,9 +304,8 @@ function startBoss() {
       onDragonHit: renderBossHP,
       onVictory: () => {
         state.bossDefeated = true;
-        saveState();
+        persistProgress();
         game.scene.stop('BossScene');
-        renderMap();
         showFinale();
       },
     },
@@ -300,8 +331,7 @@ btnQuit.addEventListener('click', () => {
     game.scene.stop('BossScene');
     game.scene.stop('RevealRoomScene');
   }
-  showScreen('screen-map');
-  renderMap();
+  goHome();
 });
 
 // --- finale screen ---
@@ -340,17 +370,87 @@ function showFinale() {
   launchConfetti();
 }
 
+// --- name entry ---
+// Loading progress is async (Supabase, when configured), so the button
+// shows a brief loading state rather than the screen just sitting there.
+async function submitName(rawName) {
+  const name = rawName.trim();
+  if (!name) {
+    nameError.textContent = 'Please type your name.';
+    return;
+  }
+  nameError.textContent = '';
+  btnNameContinue.disabled = true;
+  btnNameContinue.textContent = 'Loading…';
+  try {
+    localStorage.setItem(LAST_NAME_KEY, name);
+  } catch {
+    /* ignore storage errors, name still works for this session */
+  }
+  currentName = name;
+  state = await loadProgress(name);
+  renderMap();
+  showScreen('screen-map');
+  btnNameContinue.disabled = false;
+  btnNameContinue.textContent = 'Continue';
+}
+
+nameForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitName(nameInput.value);
+});
+
+// Lets a shared device hand off to someone else without a full page
+// reload -- her own progress is already saved, so this just clears who's
+// "current" and asks for the next name.
+btnSwitchPlayer.addEventListener('click', () => {
+  currentName = null;
+  cheatUnlocked = false;
+  nameInput.value = '';
+  nameError.textContent = '';
+  showScreen('screen-name');
+  nameInput.focus();
+});
+
+// --- "have a code?" unlock, on the map screen ---
+btnCodeToggle.addEventListener('click', () => {
+  codeForm.classList.toggle('hidden');
+  if (!codeForm.classList.contains('hidden')) codeInput.focus();
+});
+
+codeForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (codeInput.value.trim().toLowerCase() === UNLOCK_CODE) {
+    cheatUnlocked = true;
+    codeError.textContent = '';
+    codeInput.value = '';
+    codeForm.classList.add('hidden');
+    renderMap();
+  } else {
+    codeError.textContent = "That code isn't right.";
+  }
+});
+
 // --- boot ---
 btnStart.addEventListener('click', () => {
-  showScreen('screen-map');
-  renderMap();
+  let lastName = '';
+  try {
+    lastName = localStorage.getItem(LAST_NAME_KEY) || '';
+  } catch {
+    /* ignore */
+  }
+  nameInput.value = lastName;
+  nameError.textContent = '';
+  showScreen('screen-name');
+  nameInput.focus();
 });
 
 // Cheat code for jumping straight to any level without playing through the
-// ones before it: open the game with ?level=N (matching the number shown on
-// the map, 1-19) or ?level=boss for the dragon fight. Doesn't touch saved
-// progress -- completing a level this way still unlocks it normally.
-function applyCheatCode() {
+// ones before it, or typing a name first: open the game with ?level=N
+// (matching the number shown on the map, 1-19) or ?level=boss for the
+// dragon fight. No name is set for this path, so finishing a level this
+// way doesn't save progress under anyone's name (see persistProgress).
+function applyUrlPreviewCode() {
   const level = new URLSearchParams(window.location.search).get('level');
   if (!level) return;
   if (level.toLowerCase() === 'boss') {
@@ -363,5 +463,4 @@ function applyCheatCode() {
   }
 }
 
-renderMap();
-applyCheatCode();
+applyUrlPreviewCode();

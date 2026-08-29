@@ -27,6 +27,21 @@ const fail = (msg) => {
 };
 const pass = (msg) => console.log(`  \x1b[32mok\x1b[0m   ${msg}`);
 
+// Clicking "Begin the Journey" now opens a name screen before the map (see
+// main.js's submitName) -- every test that needs the map has to go through
+// it. Progress is keyed by this exact name (progressStore.js), so seeding
+// localStorage for a test has to use the same name passed here.
+async function enterAsPlayer(page, name) {
+  await page.click('#btn-start');
+  await page.waitForSelector('#screen-name.active');
+  await page.fill('#name-input', name);
+  await page.click('#btn-name-continue');
+}
+
+function progressKey(name) {
+  return `akansha-quest-progress-v2-${name}`;
+}
+
 function checkLevelGeometry() {
   console.log('\n== Level geometry (gaps/platforms actually reachable) ==');
   for (let levelIndex = 0; levelIndex < TOTAL_LEVELS; levelIndex++) {
@@ -161,7 +176,7 @@ async function checkLevelTransition(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.click('#btn-start');
+  await enterAsPlayer(page, 'TestTransition');
   await page.waitForSelector('.map-node.current');
   await page.click('.map-node.current');
   await page.waitForSelector('#game-container canvas');
@@ -260,13 +275,18 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
 
   const before = pageErrors.length;
 
+  const name = 'TestRevisit';
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  await page.evaluate(() => {
-    localStorage.setItem('akansha-quest-progress-v1', JSON.stringify({ unlocked: 19, bossDefeated: false }));
-  });
+  await page.evaluate(
+    ({ key, total }) => {
+      localStorage.clear();
+      localStorage.setItem(key, JSON.stringify({ unlocked: total, bossDefeated: false }));
+    },
+    { key: progressKey(name), total: TOTAL_LEVELS }
+  );
   await page.reload({ waitUntil: 'domcontentloaded' });
 
-  await page.click('#btn-start');
+  await enterAsPlayer(page, name);
   await page.waitForSelector('.map-node.done');
 
   // Clicking a done node opens a Play Again / View Messages choice rather
@@ -319,14 +339,19 @@ async function checkBossReplay(page, pageErrors) {
   console.log('\n== Revisiting the already-defeated dragon (Play Again / View Messages) ==');
 
   const before = pageErrors.length;
+  const name = 'TestBossReplay';
 
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  await page.evaluate((total) => {
-    localStorage.setItem('akansha-quest-progress-v1', JSON.stringify({ unlocked: total, bossDefeated: true }));
-  }, TOTAL_LEVELS);
+  await page.evaluate(
+    ({ key, total }) => {
+      localStorage.clear();
+      localStorage.setItem(key, JSON.stringify({ unlocked: total, bossDefeated: true }));
+    },
+    { key: progressKey(name), total: TOTAL_LEVELS }
+  );
   await page.reload({ waitUntil: 'domcontentloaded' });
 
-  await page.click('#btn-start');
+  await enterAsPlayer(page, name);
   await page.waitForSelector('.boss-node');
   await page.click('.boss-node');
   await page.waitForSelector('#replay-modal.active');
@@ -360,6 +385,161 @@ async function checkBossReplay(page, pageErrors) {
     fail('boss replay: "View Messages" never showed the finale screen');
   } else {
     pass('boss replay: both "Play Level Again" and "View Messages" work for the defeated dragon');
+  }
+}
+
+// Name entry (progressStore.js) gates the map now, keyed per-name so
+// several people can share one link/device and keep separate progress,
+// plus the in-game "Akansha" code that opens any level without earning it.
+async function checkNameEntryAndCheatCode(page, pageErrors) {
+  console.log('\n== Name entry (per-name progress) and the "Akansha" unlock code ==');
+
+  const before = pageErrors.length;
+
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await page.click('#btn-start');
+  await page.waitForSelector('#screen-name.active');
+
+  // Empty name should be rejected, not silently proceed.
+  await page.click('#btn-name-continue');
+  await page.waitForTimeout(150);
+  const emptyNameBlocked = await page.evaluate(
+    () => document.getElementById('name-error').textContent.length > 0 && !document.getElementById('screen-map').classList.contains('active')
+  );
+  if (!emptyNameBlocked) fail('name entry: submitting an empty name did not show an error / was not blocked');
+  else pass('name entry: empty name is rejected');
+
+  await page.fill('#name-input', 'PlayerOne');
+  await page.click('#btn-name-continue');
+  await page.waitForSelector('.map-node.current');
+  const freshDoneCount1 = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
+
+  // Finish level 1 for real, confirm it's saved under this exact name.
+  await page.click('.map-node.current');
+  await page.waitForSelector('#game-container canvas');
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('LevelScene');
+    const boss = scene.bossGuardian;
+    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 100);
+    scene.player.setFlipX(false);
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const scene = window.__testGame.scene.getScene('LevelScene');
+        const boss = scene.bossGuardian;
+        let shots = 0;
+        function tryShoot() {
+          if (!boss.active || shots >= 6) {
+            resolve();
+            return;
+          }
+          scene.player.setPosition(boss.x - 40, scene.player.y);
+          scene.shoot();
+          shots++;
+          setTimeout(tryShoot, 400);
+        }
+        tryShoot();
+      })
+  );
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('LevelScene');
+    scene.player.setPosition(scene.flag.x, scene.flag.y);
+  });
+  await page.waitForTimeout(2200);
+  for (let i = 0; i < 8; i++) {
+    const onMap = await page.evaluate(() => document.getElementById('screen-map').classList.contains('active'));
+    if (onMap) break;
+    await page.evaluate(() => {
+      const room = window.__testGame.scene.getScene('RevealRoomScene');
+      if (room && room.scene.isActive()) room.advance();
+    });
+    await page.waitForTimeout(300);
+  }
+  await page.waitForSelector('.map-node.done', { timeout: 5000 });
+
+  const savedRaw = await page.evaluate((key) => localStorage.getItem(key), progressKey('PlayerOne'));
+  const saved = savedRaw ? JSON.parse(savedRaw) : null;
+  if (freshDoneCount1 !== 0 || !saved || saved.unlocked !== 1) {
+    fail(`name entry: progress not saved correctly under 'PlayerOne' (started with ${freshDoneCount1} done, saved=${savedRaw})`);
+  } else {
+    pass("name entry: finishing a level saves progress under that exact name");
+  }
+
+  // Reloading and re-entering the SAME name should restore that progress.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.click('#btn-start');
+  await page.waitForSelector('#screen-name.active');
+  const prefill = await page.evaluate(() => document.getElementById('name-input').value);
+  await page.click('#btn-name-continue'); // prefilled value should already be 'PlayerOne'
+  await page.waitForSelector('.map-node.done, .map-node.current');
+  const doneAfterReturn = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
+  if (prefill !== 'PlayerOne' || doneAfterReturn !== 1) {
+    fail(`name entry: returning as the same name didn't restore progress (prefill="${prefill}", done=${doneAfterReturn})`);
+  } else {
+    pass('name entry: returning as the same name restores her saved progress');
+  }
+
+  // A different name on the same device/browser must NOT inherit that
+  // progress -- each name is its own separate save. Uses "switch player",
+  // not a reload, since that's the actual in-app path for a shared device.
+  await page.click('#btn-switch-player');
+  await page.waitForSelector('#screen-name.active');
+  await page.fill('#name-input', 'PlayerTwo');
+  await page.click('#btn-name-continue');
+  await page.waitForSelector('.map-node.current');
+  const doneForNewName = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
+  if (doneForNewName !== 0) {
+    fail(`name entry: a brand-new name inherited someone else's progress (${doneForNewName} done nodes)`);
+  } else {
+    pass('name entry: a different name gets its own fresh progress, not shared');
+  }
+
+  // The "Akansha" code should open every level without having earned it,
+  // and a wrong code should be rejected.
+  await page.click('#btn-code-toggle');
+  await page.waitForSelector('#code-form:not(.hidden)');
+  await page.fill('#code-input', 'not-it');
+  await page.click('#btn-code-submit');
+  await page.waitForTimeout(150);
+  const wrongCodeRejected = await page.evaluate(() => document.getElementById('code-error').textContent.length > 0);
+
+  await page.fill('#code-input', 'Akansha');
+  await page.click('#btn-code-submit');
+  await page.waitForTimeout(200);
+  const stillLocked = await page.evaluate(() => document.querySelectorAll('.map-node.locked').length);
+  const cheatOpenCount = await page.evaluate(() => document.querySelectorAll('.map-node.cheat-open').length);
+
+  if (!wrongCodeRejected || stillLocked !== 0 || cheatOpenCount !== TOTAL_LEVELS - 1) {
+    fail(
+      `cheat code: wrong code rejected=${wrongCodeRejected}, locked left=${stillLocked}, cheat-open=${cheatOpenCount}/${TOTAL_LEVELS - 1}`
+    );
+  } else {
+    pass(`cheat code: wrong code rejected, "Akansha" opens all ${TOTAL_LEVELS - 1} not-yet-earned levels`);
+  }
+
+  // And a cheat-opened node must actually start that level, not just look clickable.
+  await page.evaluate(() => document.querySelector('.map-node.cheat-open').click());
+  await page.waitForSelector('#game-container canvas');
+  await page.waitForTimeout(500);
+  const cheatLevelActive = await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('LevelScene');
+    return !!(scene && scene.scene.isActive());
+  });
+
+  const newErrors = pageErrors.splice(before);
+  if (newErrors.length) {
+    newErrors.forEach((e) => fail(`name/cheat code: console error: ${e}`));
+  } else if (!cheatLevelActive) {
+    fail('cheat code: clicking a cheat-opened node never actually started the level');
+  } else {
+    pass('cheat code: a cheat-opened node actually starts its level');
   }
 }
 
@@ -506,7 +686,7 @@ async function checkBossFightsAndCompletion(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.click('#btn-start');
+  await enterAsPlayer(page, 'TestMiniBosses');
   await page.waitForSelector('.map-node.current');
   await page.click('.map-node.current');
   await page.waitForSelector('#game-container canvas');
@@ -595,6 +775,7 @@ async function main() {
 
     await checkLevelTransition(page);
     await checkRevisitAfterCompletion(page, pageErrors);
+    await checkNameEntryAndCheatCode(page, pageErrors);
     await checkDragonFight(page, pageErrors);
     await checkBossReplay(page, pageErrors);
     await checkBossFightsAndCompletion(page);
