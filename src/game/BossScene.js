@@ -38,12 +38,23 @@ const DRAGON_LOW_Y = 400;
 // origin -- kept as one constant so the decorative belly and the physics
 // weak-point circle stay lined up.
 const WEAK_OFFSET_Y = 20;
-const SHOOT_COOLDOWN = 380;
-// How often the next friend in the squad takes a shot. Deterministic and
-// not gated behind the dragon being "vulnerable" -- unlike the player's own
-// weak-point shots, the squad's volley is what guarantees the fight always
-// finishes even if she never fires a single shot herself.
-const ALLY_FIRE_INTERVAL = 480;
+const SHOOT_COOLDOWN = 200;
+const PLAYER_PROJECTILE_SPEED = 520;
+// How fast the dragon itself drops down/pulls back up during a swoop, and
+// how often it starts a new one.
+const SWOOP_MOVE_DURATION = 240;
+const VULNERABLE_WINDOW_MS = 1000;
+const SWOOP_INTERVAL = 2600;
+// How often it throws, and how fast the fireball itself travels.
+const FIREBALL_INTERVAL = 500;
+const FIREBALL_SPEED = 320;
+// How often the next friend in the squad takes a shot, and how long their
+// shot takes to reach the dragon. Deterministic and not gated behind the
+// dragon being "vulnerable" -- unlike the player's own weak-point shots,
+// the squad's volley is what guarantees the fight always finishes even if
+// she never fires a single shot herself.
+const ALLY_FIRE_INTERVAL = 260;
+const ALLY_PROJECTILE_DURATION = 220;
 const JAIL_X = 480;
 const JAIL_Y = 84;
 const JAIL_W = 118;
@@ -180,8 +191,8 @@ export default class BossScene extends Phaser.Scene {
     this.callbacks.onHeartsChange(this.hearts);
     this.callbacks.onBossStart(DRAGON_HP);
 
-    this.swoopTimer = this.time.addEvent({ delay: 4200, callback: () => this.swoop(), loop: true });
-    this.fireTimer = this.time.addEvent({ delay: 950, callback: () => this.spawnFireball(), loop: true });
+    this.swoopTimer = this.time.addEvent({ delay: SWOOP_INTERVAL, callback: () => this.swoop(), loop: true });
+    this.fireTimer = this.time.addEvent({ delay: FIREBALL_INTERVAL, callback: () => this.spawnFireball(), loop: true });
     this.allyFireTimer = this.time.addEvent({ delay: ALLY_FIRE_INTERVAL, callback: () => this.allyVolley(), loop: true });
   }
 
@@ -286,7 +297,7 @@ export default class BossScene extends Phaser.Scene {
       targets: proj,
       x: this.dragonGroup.x,
       y: this.dragonGroup.y + WEAK_OFFSET_Y,
-      duration: 380,
+      duration: ALLY_PROJECTILE_DURATION,
       ease: 'Sine.easeIn',
       onComplete: () => {
         proj.destroy();
@@ -360,9 +371,9 @@ export default class BossScene extends Phaser.Scene {
 
   swoop() {
     // Guards against two swoop cycles ever animating at once -- the down
-    // tween, the 1400ms exposed window, and the up tween overlap the
-    // weak point's own physics body updates, and a second swoop starting
-    // mid-cycle left a dangling tween touching that body after it was gone.
+    // tween, the exposed window, and the up tween overlap the weak point's
+    // own physics body updates, and a second swoop starting mid-cycle left
+    // a dangling tween touching that body after it was gone.
     if (this.finished || this.isSwooping) return;
     this.isSwooping = true;
     this.vulnerable = true;
@@ -370,16 +381,16 @@ export default class BossScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.dragonGroup,
       y: `+=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
-      duration: 500,
+      duration: SWOOP_MOVE_DURATION,
       ease: 'Sine.easeOut',
       onUpdate: () => this.syncWeakPoint(),
       onComplete: () => {
         // Landing an early hit (see tryHitDragon) retracts the dragon
         // itself and cancels this timer -- if it didn't, this would fire
-        // 1400ms after every swoop *regardless* of an early hit already
-        // having retracted the dragon, retracting it a second time and
-        // leaving it stuck off-screen for every swoop after the first hit.
-        this.swoopCloseTimer = this.time.delayedCall(1400, () => {
+        // after every swoop *regardless* of an early hit already having
+        // retracted the dragon, retracting it a second time and leaving
+        // it stuck off-screen for every swoop after the first hit.
+        this.swoopCloseTimer = this.time.delayedCall(VULNERABLE_WINDOW_MS, () => {
           if (this.finished) return;
           this.retractDragon();
         });
@@ -397,7 +408,7 @@ export default class BossScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.dragonGroup,
       y: `-=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
-      duration: 500,
+      duration: SWOOP_MOVE_DURATION,
       ease: 'Sine.easeIn',
       onUpdate: () => this.syncWeakPoint(),
       onComplete: () => {
@@ -424,7 +435,7 @@ export default class BossScene extends Phaser.Scene {
     this.physics.add.existing(fb);
     this.fireballs.add(fb);
     fb.body.setAllowGravity(false);
-    fb.body.setVelocityX(dir * 210);
+    fb.body.setVelocityX(dir * FIREBALL_SPEED);
     this.time.delayedCall(2600, () => fb.destroy());
   }
 
@@ -445,7 +456,7 @@ export default class BossScene extends Phaser.Scene {
     this.physics.add.existing(proj);
     this.playerProjectiles.add(proj);
     proj.body.setAllowGravity(false);
-    proj.body.setVelocityX(dir * 420);
+    proj.body.setVelocityX(dir * PLAYER_PROJECTILE_SPEED);
     this.time.delayedCall(1000, () => {
       if (proj.active) proj.destroy();
     });
