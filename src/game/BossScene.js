@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './humanoid.js';
 import { createFaceOverlay } from './faceOverlay.js';
+import { ensureCirclePhotoTexture } from './circlePhoto.js';
 import { ensureWandTexture } from './weapon.js';
 import { player as playerConfig } from '../data/player.js';
 import { friends } from '../data/friends.js';
@@ -205,8 +206,14 @@ export default class BossScene extends Phaser.Scene {
 
     const photoRadius = JAIL_H / 2 - 14;
     if (playerConfig.facePhoto && this.textures.exists('face-player')) {
-      const photo = createFaceOverlay(this, { textureKey: 'face-player', radius: photoRadius });
-      photo.setPosition(JAIL_X, JAIL_Y);
+      // Stays still the whole fight, so it can be baked once too (see
+      // ensureCirclePhotoTexture) instead of a live mask.
+      const bakedKey = ensureCirclePhotoTexture(this, {
+        key: `jail-photo-${Math.round(photoRadius)}`,
+        sourceKey: 'face-player',
+        diameter: Math.round(photoRadius * 2),
+      });
+      this.add.image(JAIL_X, JAIL_Y, bakedKey);
     } else {
       this.add.circle(JAIL_X, JAIL_Y, photoRadius, 0xffd166);
       this.add
@@ -264,8 +271,17 @@ export default class BossScene extends Phaser.Scene {
     const photoKey = `face-friend-${friend.id}`;
     if (friend.photoSolo && this.textures.exists(photoKey)) {
       const heroHead = headGeometry(HERO_SIZE);
-      const face = createFaceOverlay(this, { textureKey: photoKey, radius: heroHead.radius * ALLY_SCALE * ALLY_FACE_SCALE });
-      face.setPosition(x, y + heroHead.offsetY * ALLY_SCALE);
+      const radius = heroHead.radius * ALLY_SCALE * ALLY_FACE_SCALE;
+      // Baked once (see circlePhoto.js), not a live mask -- up to 19 of
+      // these can be on screen simultaneously, and 19 live GeometryMasks
+      // measurably dropped the frame rate. Static avatars don't need to
+      // move, so baking is free of the tradeoffs a live mask exists for.
+      const bakedKey = ensureCirclePhotoTexture(this, {
+        key: `ally-face-${friend.id}-${Math.round(radius)}`,
+        sourceKey: photoKey,
+        diameter: Math.round(radius * 2),
+      });
+      this.add.image(x, y + heroHead.offsetY * ALLY_SCALE, bakedKey);
     } else {
       // No photo yet -- tint the figure itself in her color instead of a
       // separate placeholder shape, same "still reads as her" fallback
