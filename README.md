@@ -1,8 +1,11 @@
 # A Quest for Akansha 🐉
 
-A small birthday platformer. She plays through one short level per
-friend, wearing that friend's own face as she runs and jumps through
-it. Each level ends in a short boss fight against a small mythical
+A small birthday platformer. It opens on a short story screen — a dragon
+has taken Akansha, and only her gathered friends can save her — before
+asking who's playing. From there she plays through one short level per
+friend, named for that friend and wearing their own face as she runs and
+jumps through it. Each level ends in a short boss fight against a small
+mythical
 creature (snake/dog/wolf/lion/griffin/minotaur/yeti/bat, cycling by
 level) that throws fireballs to dodge — she wields a little wand and
 can shoot back (F key, or the 🔮 button on screen) or jump on it —
@@ -12,9 +15,11 @@ ceiling, where a sequence of framed pictures reveals that friend to
 her one at a time — a photo, then their birthday wish, first
 impression, where they met, impression now, and a quality she loves
 about her — tapped through at her own pace, with a photo of the two of
-them together at the bottom of the room throughout. The last level is
-a full dragon boss fight for Akansha's own cage, held above the arena
-throughout — every rescued friend shows up too, each on their own
+them together at the bottom of the room throughout. Once every friend is
+rescued, a second story screen rallies everyone before the final fight.
+The last level is a full dragon boss fight for Akansha's own cage, held
+above the arena throughout — every rescued friend shows up too, each on
+their own
 floating podium around the fight, armed with the same wand she carries
 and firing on the dragon automatically the whole time. It swoops down
 and throws fire to dodge, and she can shoot back herself while its belly
@@ -64,6 +69,14 @@ npm run dev
 - **Finale message**: `finaleNote` at the bottom of
   [src/data/friends.js](src/data/friends.js) — one closing message shown
   after the dragon fight.
+- **Story text**: the two story screens — the intro before naming
+  yourself, and the "Assemble" rally right before the final dragon
+  attempt — live directly in
+  [index.html](index.html) (`#screen-story-intro` / `#screen-story-rally`),
+  plain paragraphs you can edit like any other copy on the page. Each
+  level is titled with that friend's own name in the in-game HUD
+  (`#level-title`, set in [src/main.js](src/main.js)'s `startLevel()`),
+  not a level number.
 - **Difficulty / level count**: levels are generated procedurally in
   [src/game/levelConfig.js](src/game/levelConfig.js) from the friends
   list, so the level count always matches however many friends are in
@@ -198,7 +211,10 @@ an empty name is rejected, finishing a level actually saves under that
 exact name, returning as that same name restores it, a different name on
 the same browser gets its own fresh progress rather than inheriting
 someone else's, and the "Akansha" unlock code (see below) actually opens
-every level and each opened level actually starts. All of these have
+every level and each opened level actually starts. It also confirms the
+"Assemble" rally story only shows before the *first* real dragon
+attempt, doesn't start the fight itself, and that continuing from it
+actually does. All of these have
 happened for real during development — this is meant to run after any
 change that touches level generation, physics, the boss fight, name
 entry/progress, or scene setup, not just once. See

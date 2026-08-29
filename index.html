@@ -22,6 +22,19 @@
       <p class="hint">Arrow keys / WASD to move &middot; Space to jump &middot; F or 🔮 to shoot</p>
     </section>
 
+    <!-- QUEST INTRO STORY, shown once before naming yourself -->
+    <section id="screen-story-intro" class="screen">
+      <div class="stars"></div>
+      <h2 class="pixel-title small">The Quest Begins</h2>
+      <div class="story-text">
+        <p>On the night before her birthday, a dragon swept out of the sky and locked Akansha away in a cage high above the clouds.</p>
+        <p>But she has something the dragon never counted on: every single friend who has ever loved her.</p>
+        <p>One by one, each of you must find your courage, face your own trial, and add your strength to the cause.</p>
+        <p>When everyone has gathered... only then can the dragon fall, and Akansha come home to celebrate the birthday she deserves.</p>
+      </div>
+      <button class="btn-primary" id="btn-story-intro-continue">Continue</button>
+    </section>
+
     <!-- NAME SCREEN, so progress can be saved per-person -->
     <section id="screen-name" class="screen">
       <div class="stars"></div>
@@ -39,6 +52,19 @@
         <p id="name-error" class="name-error"></p>
         <button class="btn-primary" id="btn-name-continue" type="submit">Continue</button>
       </form>
+    </section>
+
+    <!-- RALLY STORY, shown once before the first real dragon attempt -->
+    <section id="screen-story-rally" class="screen">
+      <div class="stars"></div>
+      <h2 class="pixel-title small">Assemble</h2>
+      <div class="story-text">
+        <p>Every friend has been rescued. Every memory gathered.</p>
+        <p>The dragon's cage looms ahead, with Akansha locked inside.</p>
+        <p>This is it — no more waiting.</p>
+        <p class="story-rally-line">Alright, backchods — let's assemble and save Akansha, so we can finally celebrate her birthday like she deserves! 🐉🎂</p>
+      </div>
+      <button class="btn-primary" id="btn-story-rally-continue">Face the Dragon</button>
     </section>
 
     <!-- MAP SCREEN -->
@@ -65,6 +91,7 @@
     <section id="screen-game" class="screen">
       <div id="game-hud">
         <button class="btn-small" id="btn-quit-level">&larr; Map</button>
+        <div id="level-title"></div>
         <div id="boss-hp"></div>
         <div id="hearts"></div>
       </div>

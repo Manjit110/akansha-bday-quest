@@ -371,6 +371,7 @@ html, body {
 #screen-game { padding: 0; justify-content: flex-start; }
 
 #game-hud {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -381,6 +382,36 @@ html, body {
 
 #hearts { display: flex; gap: 6px; font-size: 22px; }
 #boss-hp { display: flex; gap: 4px; font-size: 22px; }
+
+#level-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--accent-gold);
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+/* --- story screens --- */
+.story-text {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 0 28px;
+}
+.story-text p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.story-rally-line {
+  color: var(--text-light) !important;
+  font-weight: 700;
+  font-size: 18px !important;
+}
 
 #game-container {
   width: 100%;

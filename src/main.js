@@ -35,6 +35,9 @@ let cheatUnlocked = false;
 // --- DOM refs ---
 const screens = document.querySelectorAll('.screen');
 const btnStart = document.getElementById('btn-start');
+const btnStoryIntroContinue = document.getElementById('btn-story-intro-continue');
+const btnStoryRallyContinue = document.getElementById('btn-story-rally-continue');
+const levelTitleEl = document.getElementById('level-title');
 const nameForm = document.getElementById('name-form');
 const nameInput = document.getElementById('name-input');
 const nameError = document.getElementById('name-error');
@@ -125,7 +128,7 @@ function renderMap() {
     } else if (i === state.unlocked) {
       node.classList.add('current');
       node.textContent = String(i + 1);
-      node.title = 'Play this level';
+      node.title = `Play ${friend.name}'s level`;
       node.addEventListener('click', () => startLevel(i));
     } else if (cheatUnlocked) {
       node.classList.add('cheat-open');
@@ -154,7 +157,7 @@ function renderMap() {
   } else {
     bossNode.textContent = '🐉';
     bossNode.title = 'Face the dragon';
-    bossNode.addEventListener('click', startBoss);
+    bossNode.addEventListener('click', showBossRallyStory);
   }
   bossNodeWrap.appendChild(bossNode);
 }
@@ -263,6 +266,7 @@ function startLevel(index) {
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'flex';
   heartsEl.style.display = 'flex';
+  levelTitleEl.textContent = friends[index].name;
   showScreen('screen-game');
   ensureGame();
   renderHearts(3);
@@ -289,6 +293,7 @@ function startLevel(index) {
 function revisitFriend(index) {
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'none';
+  levelTitleEl.textContent = friends[index].name;
   showScreen('screen-game');
   ensureGame();
   game.scene.start('RevealRoomScene', {
@@ -305,6 +310,7 @@ function revisitFriend(index) {
 function startBoss() {
   bossHpEl.style.display = 'flex';
   btnShoot.style.display = 'flex';
+  levelTitleEl.textContent = '';
   showScreen('screen-game');
   ensureGame();
   renderHearts(3);
@@ -448,6 +454,10 @@ codeForm.addEventListener('submit', (e) => {
 
 // --- boot ---
 btnStart.addEventListener('click', () => {
+  showScreen('screen-story-intro');
+});
+
+btnStoryIntroContinue.addEventListener('click', () => {
   let lastName = '';
   try {
     lastName = localStorage.getItem(LAST_NAME_KEY) || '';
@@ -459,6 +469,14 @@ btnStart.addEventListener('click', () => {
   showScreen('screen-name');
   nameInput.focus();
 });
+
+// Shown once before the first real dragon attempt (not on a replay of an
+// already-defeated dragon, which skips straight to startBoss()).
+function showBossRallyStory() {
+  showScreen('screen-story-rally');
+}
+
+btnStoryRallyContinue.addEventListener('click', startBoss);
 
 // Cheat code for jumping straight to any level without playing through the
 // ones before it, or typing a name first: open the game with ?level=N

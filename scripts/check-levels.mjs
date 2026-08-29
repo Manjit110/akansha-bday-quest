@@ -33,6 +33,8 @@ const pass = (msg) => console.log(`  \x1b[32mok\x1b[0m   ${msg}`);
 // localStorage for a test has to use the same name passed here.
 async function enterAsPlayer(page, name) {
   await page.click('#btn-start');
+  await page.waitForSelector('#screen-story-intro.active');
+  await page.click('#btn-story-intro-continue');
   await page.waitForSelector('#screen-name.active');
   await page.fill('#name-input', name);
   await page.click('#btn-name-continue');
@@ -331,6 +333,54 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
   }
 }
 
+// The "Assemble" rally story shown once before her very first real dragon
+// attempt (not on a replay of an already-defeated dragon -- that's the
+// separate checkBossReplay below, which goes straight to startBoss()).
+async function checkBossRallyStory(page, pageErrors) {
+  console.log('\n== Rally story before the first dragon attempt ==');
+
+  const before = pageErrors.length;
+  const name = 'TestRally';
+
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(
+    ({ key, total }) => {
+      localStorage.clear();
+      localStorage.setItem(key, JSON.stringify({ unlocked: total, bossDefeated: false }));
+    },
+    { key: progressKey(name), total: TOTAL_LEVELS }
+  );
+  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await enterAsPlayer(page, name);
+  await page.waitForSelector('.boss-node');
+  await page.click('.boss-node');
+  await page.waitForSelector('#screen-story-rally.active');
+
+  const bossNotStartedYet = await page.evaluate(() => {
+    const scene = window.__testGame && window.__testGame.scene.getScene('BossScene');
+    return !scene || !scene.scene.isActive();
+  });
+
+  await page.click('#btn-story-rally-continue');
+  await page.waitForTimeout(500);
+  const bossActive = await page.evaluate(() => {
+    const scene = window.__testGame && window.__testGame.scene.getScene('BossScene');
+    return !!(scene && scene.scene.isActive());
+  });
+
+  const newErrors = pageErrors.splice(before);
+  if (newErrors.length) {
+    newErrors.forEach((e) => fail(`rally story: console error: ${e}`));
+  } else if (!bossNotStartedYet) {
+    fail('rally story: the dragon fight started immediately instead of showing the rally story first');
+  } else if (!bossActive) {
+    fail('rally story: "Face the Dragon" never actually started the fight');
+  } else {
+    pass('rally story: shown before the first dragon attempt, and continuing actually starts the fight');
+  }
+}
+
 // The same Play Again / View Messages choice, for the already-defeated
 // dragon node on the map -- shares the modal and DOM ids with the
 // per-friend version above, keyed by the 'boss' sentinel instead of an
@@ -401,6 +451,8 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
   await page.reload({ waitUntil: 'domcontentloaded' });
 
   await page.click('#btn-start');
+  await page.waitForSelector('#screen-story-intro.active');
+  await page.click('#btn-story-intro-continue');
   await page.waitForSelector('#screen-name.active');
 
   // Empty name should be rejected, not silently proceed.
@@ -475,6 +527,8 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
   // Reloading and re-entering the SAME name should restore that progress.
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.click('#btn-start');
+  await page.waitForSelector('#screen-story-intro.active');
+  await page.click('#btn-story-intro-continue');
   await page.waitForSelector('#screen-name.active');
   const prefill = await page.evaluate(() => document.getElementById('name-input').value);
   await page.click('#btn-name-continue'); // prefilled value should already be 'PlayerOne'
@@ -794,6 +848,7 @@ async function main() {
     await checkRevisitAfterCompletion(page, pageErrors);
     await checkNameEntryAndCheatCode(page, pageErrors);
     await checkDragonFight(page, pageErrors);
+    await checkBossRallyStory(page, pageErrors);
     await checkBossReplay(page, pageErrors);
     await checkBossFightsAndCompletion(page);
 
