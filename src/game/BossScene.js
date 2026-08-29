@@ -356,9 +356,9 @@ export default class BossScene extends Phaser.Scene {
     }
   }
 
-  // A small composite dragon (container of primitives) in the same chibi/
-  // low-poly style as the level mini-bosses (see animals.js), in place of
-  // a flat rectangle with two circles that didn't read as a dragon at all.
+  // A small composite dragon (container of primitives) in the same
+  // chibi/low-poly style as the rest of the game, in place of a flat
+  // rectangle with two circles that didn't read as a dragon at all.
   // Built as a Container so the whole thing can be tweened as one unit.
   buildDragon() {
     const { dragonBody: body, dragonBelly: belly } = PALETTE;

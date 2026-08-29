@@ -13,8 +13,17 @@ export function ensureCirclePhotoTexture(scene, { key, sourceKey, diameter }) {
   maskShape.fillStyle(0xffffff);
   maskShape.fillCircle(diameter / 2, diameter / 2, diameter / 2);
 
+  // Scale to *cover* the circle (like CSS object-fit: cover) instead of
+  // stretching to a square -- a non-square source (arbitrary monster
+  // art, not just cropped headshots) would otherwise come out visibly
+  // squashed along whichever axis is shorter.
+  const source = scene.textures.get(sourceKey).getSourceImage();
+  const natW = source.width || diameter;
+  const natH = source.height || diameter;
+  const coverScale = Math.max(diameter / natW, diameter / natH);
+
   const image = scene.make.image({ x: diameter / 2, y: diameter / 2, key: sourceKey, add: false });
-  image.setDisplaySize(diameter, diameter);
+  image.setDisplaySize(natW * coverScale, natH * coverScale);
   image.setMask(maskShape.createGeometryMask());
 
   const rt = scene.make.renderTexture({ width: diameter, height: diameter }, false);

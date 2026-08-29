@@ -188,7 +188,14 @@ async function checkLevelTransition(page) {
   await page.evaluate(() => {
     const scene = window.__testGame.scene.getScene('LevelScene');
     const boss = scene.bossGuardian;
-    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 100);
+    // Close to her actual standing height, not the ~100px drop this used
+    // before -- the mini-boss's portrait hitbox is taller than the old
+    // procedural animal sprites were, and a longer fall could pass close
+    // enough to it mid-transit to register as an accidental stomp (see
+    // handleEnemyHit's velocity.y>0 check), bouncing her away before she
+    // gets a real shot off. Confirmed this exact flake happening on a real
+    // run, not just in theory.
+    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 40);
     scene.player.setFlipX(false);
   });
   await page.waitForTimeout(400);
@@ -501,7 +508,8 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
   await page.evaluate(() => {
     const scene = window.__testGame.scene.getScene('LevelScene');
     const boss = scene.bossGuardian;
-    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 100);
+    // Short drop, not a long fall -- see checkLevelTransition's comment.
+    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 40);
     scene.player.setFlipX(false);
   });
   await page.waitForTimeout(400);
@@ -810,7 +818,8 @@ async function checkBossFightsAndCompletion(page) {
     await page.evaluate(() => {
       const scene = window.__testGame.scene.getScene('LevelScene');
       const boss = scene.bossGuardian;
-      scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 100);
+      // Short drop, not a long fall -- see checkLevelTransition's comment.
+    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 40);
       scene.player.setFlipX(false);
     });
     await page.waitForTimeout(400);

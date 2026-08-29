@@ -1,14 +1,15 @@
 import Phaser from 'phaser';
 import { generateLevel } from './levelConfig.js';
 import { ensureHeroTexture, ensureImpTexture, animateHumanoid, headGeometry, HERO_SIZE, IMP_SIZE } from './humanoid.js';
-import { ensureAnimalTexture, ANIMAL_TYPES, BOSS_ANIMAL_SIZE } from './animals.js';
 import { createFaceOverlay } from './faceOverlay.js';
+import { ensureCirclePhotoTexture } from './circlePhoto.js';
 import { ensureWandTexture } from './weapon.js';
 import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
 import { getLevelTheme } from './levelThemes.js';
 import { assetUrl } from '../assetPath.js';
 import { playSound } from '../sound.js';
+import { MONSTER_IMAGES } from '../data/monsterImages.js';
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -19,6 +20,12 @@ const PALETTE = {
 // The face shown on the player is enlarged relative to the drawn head, so
 // it reads clearly at this small sprite scale (and just looks fun/chibi).
 const PLAYER_FACE_SCALE = 1.8;
+// Each level's mini-boss is a real monster image, not a procedurally
+// drawn animal -- cropped to a circular badge (see circlePhoto.js) so an
+// opaque background baked into the source (several of these are plain
+// .jpg, which can't have transparency at all) reads as a deliberate
+// framed portrait instead of a stray rectangle floating in the scene.
+const MONSTER_BADGE_SIZE = 76;
 const SHOOT_COOLDOWN = 380;
 const BOSS_HP = 3;
 
@@ -62,6 +69,10 @@ export default class LevelScene extends Phaser.Scene {
     }
     if (this.friend?.photoTogether) {
       this.load.image(`together-friend-${this.friend.id}`, assetUrl(this.friend.photoTogether));
+    }
+    const monsterSrc = MONSTER_IMAGES[this.levelIndex % MONSTER_IMAGES.length];
+    if (monsterSrc && !this.textures.exists(`monster-src-${this.levelIndex}`)) {
+      this.load.image(`monster-src-${this.levelIndex}`, assetUrl(monsterSrc));
     }
   }
 
@@ -290,16 +301,19 @@ export default class LevelScene extends Phaser.Scene {
   }
 
   spawnMiniBoss(cfg) {
-    const type = ANIMAL_TYPES[this.levelIndex % ANIMAL_TYPES.length];
-    const baseKey = `animal-boss-${type}`;
-    ensureAnimalTexture(this, type, baseKey, BOSS_ANIMAL_SIZE);
+    const photoKey = ensureCirclePhotoTexture(this, {
+      key: `monster-badge-${this.levelIndex}`,
+      sourceKey: `monster-src-${this.levelIndex}`,
+      diameter: MONSTER_BADGE_SIZE,
+    });
 
     const guardX = cfg.flagX - 110;
-    const guardian = this.physics.add.sprite(guardX, cfg.groundY - BOSS_ANIMAL_SIZE.height / 2, `${baseKey}-idle`);
+    const guardY = cfg.groundY - MONSTER_BADGE_SIZE / 2;
+    const guardian = this.physics.add.sprite(guardX, guardY, photoKey);
+    guardian.isPhotoBoss = true;
     guardian.body.setAllowGravity(false);
-    guardian.body.setSize(BOSS_ANIMAL_SIZE.width * 0.7, BOSS_ANIMAL_SIZE.height * 0.7);
-    guardian.body.setOffset(BOSS_ANIMAL_SIZE.width * 0.15, BOSS_ANIMAL_SIZE.height * 0.3);
-    guardian.baseKeyName = baseKey;
+    guardian.body.setSize(MONSTER_BADGE_SIZE * 0.8, MONSTER_BADGE_SIZE * 0.8);
+    guardian.body.setOffset(MONSTER_BADGE_SIZE * 0.1, MONSTER_BADGE_SIZE * 0.1);
     // Kept inside the guaranteed-solid ground before the gate (see SAFE_END
     // in levelConfig.js) so the patrol never drifts out over a gap.
     guardian.startX = guardX - 45;
@@ -310,8 +324,16 @@ export default class LevelScene extends Phaser.Scene {
     this.enemyGroup.add(guardian);
     this.bossGuardian = guardian;
 
+    // A ring in this friend's own color, tying the portrait into the
+    // level's theming like everything else in this scene -- also softens
+    // the fact that several of the source images aren't actually
+    // transparent, by making the frame itself an intentional design.
+    const ringColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
+    this.bossRing = this.add.circle(guardX, guardY, MONSTER_BADGE_SIZE / 2 + 2, 0x000000, 0);
+    this.bossRing.setStrokeStyle(3, ringColor, 0.9);
+
     this.bossHpPips = [0, 1, 2].map((i) =>
-      this.add.circle(guardX - 14 + i * 14, cfg.groundY - BOSS_ANIMAL_SIZE.height - 14, 5, 0xff5d5d)
+      this.add.circle(guardX - 14 + i * 14, guardY - MONSTER_BADGE_SIZE / 2 - 14, 5, 0xff5d5d)
     );
 
     this.bossThrowTimer = this.time.addEvent({
@@ -439,12 +461,15 @@ export default class LevelScene extends Phaser.Scene {
     this.bossHpPips.forEach((p) => p.destroy());
     this.bossHpPips = [];
     this.tweens.add({
-      targets: enemy,
+      targets: this.bossRing ? [enemy, this.bossRing] : enemy,
       alpha: 0,
       scale: 0.3,
       duration: 400,
       ease: 'Back.easeIn',
-      onComplete: () => enemy.destroy(),
+      onComplete: () => {
+        enemy.destroy();
+        if (this.bossRing) this.bossRing.destroy();
+      },
     });
   }
 
@@ -522,11 +547,12 @@ export default class LevelScene extends Phaser.Scene {
       this.damagePlayer();
     }
 
-    // mini-boss HP pips follow it as it patrols
+    // mini-boss HP pips and its portrait ring follow it as it patrols
     if (this.bossGuardian && this.bossGuardian.active) {
       this.bossHpPips.forEach((pip, i) => {
         pip.x = this.bossGuardian.x - 14 + i * 14;
       });
+      if (this.bossRing) this.bossRing.x = this.bossGuardian.x;
     }
 
     // enemy patrol turnaround
@@ -534,7 +560,12 @@ export default class LevelScene extends Phaser.Scene {
       if (!enemy.active) return;
       if (enemy.x <= enemy.startX) enemy.body.setVelocityX(Math.abs(enemy.body.velocity.x));
       if (enemy.x >= enemy.endX) enemy.body.setVelocityX(-Math.abs(enemy.body.velocity.x));
-      animateHumanoid(enemy, { onGround: true, time, baseKey: enemy.baseKeyName });
+      // The mini-boss portrait is a single static image with no
+      // idle/step-a/step-b frames and no baseKeyName -- animateHumanoid()
+      // would try to swap to a texture that doesn't exist every frame.
+      if (!enemy.isPhotoBoss) {
+        animateHumanoid(enemy, { onGround: true, time, baseKey: enemy.baseKeyName });
+      }
     });
   }
 }

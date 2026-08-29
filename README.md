@@ -82,16 +82,22 @@ npm run dev
   list, so the level count always matches however many friends are in
   the array — no separate level design needed if you add or remove
   someone.
-- **Visuals**: the player and enemies are small procedurally-drawn
-  humanoid figures ([src/game/humanoid.js](src/game/humanoid.js)) — no
-  image assets needed. Any friend with a `photoSolo` automatically gets
-  their real face circle-cropped onto the player character for that
+- **Visuals**: the player and regular patrol enemies are small
+  procedurally-drawn humanoid figures ([src/game/humanoid.js](src/game/humanoid.js))
+  — no image assets needed. Any friend with a `photoSolo` automatically
+  gets their real face circle-cropped onto the player character for that
   level, enlarged so it's easy to make out at gameplay scale
   ([src/game/faceOverlay.js](src/game/faceOverlay.js)); square-ish
   photos work best since they're fit into a circle. The mini-boss
-  creature guarding each level's fort gate is drawn in
-  [src/game/animals.js](src/game/animals.js) — add more types to
-  `ANIMAL_TYPES` there for more variety than the current eight.
+  guarding each level's fort gate is a real monster image instead, one
+  per level in order — [src/data/monsterImages.js](src/data/monsterImages.js)
+  lists the 19 files (in [public/monsters/](public/monsters/)), cropped
+  to a circular badge in that friend's own color
+  ([src/game/circlePhoto.js](src/game/circlePhoto.js) crops/bakes it once
+  rather than live-masking it every frame, so it stays cheap even though
+  it's a real photo). Add or replace entries in that list for more/
+  different monsters; any image works regardless of its own background,
+  since the circular crop is what's actually shown.
 - **Level environments**: each level's background is one of five
   themes — hills, mountains, city, night forest, desert — cycling by
   level index ([src/game/levelThemes.js](src/game/levelThemes.js), add
