@@ -214,11 +214,36 @@ async function checkLevelTransition(page) {
 
   // Walk into the fort for real, not teleport past it, so enterFort()'s
   // inputLocked/enteringFort flags actually get exercised the way a real
-  // playthrough sets them.
+  // playthrough sets them. Entering near the right edge of the 80px-wide
+  // flag zone (rather than dead center) is the exact case that used to
+  // carry her past the doorway and into the right-hand pillar's own
+  // footprint before fading -- see the centering check right after.
   await page.evaluate(() => {
     const scene = window.__testGame.scene.getScene('LevelScene');
-    scene.player.setPosition(scene.flag.x, scene.flag.y);
+    scene.player.setPosition(scene.flag.x + 35, scene.flag.y);
   });
+
+  const stopPos = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const scene = window.__testGame.scene.getScene('LevelScene');
+        const check = () => {
+          if (scene.player.body && scene.player.body.velocity.x === 0 && scene.enteringFort) {
+            resolve({ x: scene.player.x, gateX: scene.cfg.flagX });
+          } else {
+            setTimeout(check, 30);
+          }
+        };
+        check();
+      })
+  );
+  const offCenter = Math.abs(stopPos.x - stopPos.gateX);
+  if (offCenter > 4) {
+    fail(`level 1: fort entry stopped ${offCenter.toFixed(0)}px off the gate's center (x=${stopPos.x.toFixed(0)}, gate=${stopPos.gateX}) -- likely standing in the pillar instead of the doorway`);
+  } else {
+    pass(`level 1: fort entry centers on the doorway regardless of where she entered the flag zone (off by ${offCenter.toFixed(1)}px)`);
+  }
+
   await page.waitForTimeout(2200); // fort walk-in pan + fade + RevealRoomScene create
 
   const roomReached = await page.evaluate(() => {

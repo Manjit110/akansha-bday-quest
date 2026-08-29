@@ -244,15 +244,29 @@ export default class LevelScene extends Phaser.Scene {
     if (this.enteringFort) return;
     this.enteringFort = true;
     this.inputLocked = true;
-    this.player.body.setVelocityX(140);
+
+    // Walk to the exact center of the doorway (between the two pillars),
+    // not wherever a fixed speed/duration happens to leave her. The flag
+    // zone is 80px wide, so the overlap that triggers this can fire
+    // anywhere across it -- a fixed walk used to consistently carry her
+    // past center and into the right-hand pillar's own footprint, so she
+    // faded out looking like she'd walked into the pillar instead of the
+    // gate.
+    const gateCenterX = this.cfg.flagX;
+    const dx = gateCenterX - this.player.x;
+    const walkSpeed = 140;
+    this.player.body.setVelocityX(Math.sign(dx || 1) * walkSpeed);
+    const walkMs = Math.min(900, (Math.abs(dx) / walkSpeed) * 1000);
 
     this.cameras.main.stopFollow();
     this.cameras.main.pan(this.interiorX, this.cameras.main.midPoint.y, 700, 'Sine.easeInOut');
 
-    this.time.delayedCall(550, () => {
-      if (this.player.body) this.player.body.setVelocityX(0);
+    this.time.delayedCall(walkMs, () => {
+      if (!this.player.body) return;
+      this.player.body.setVelocityX(0);
+      this.player.setPosition(gateCenterX, this.player.y);
     });
-    this.time.delayedCall(750, () => this.fadeIntoDoor());
+    this.time.delayedCall(walkMs + 200, () => this.fadeIntoDoor());
   }
 
   fadeIntoDoor() {
