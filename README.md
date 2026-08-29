@@ -116,6 +116,13 @@ npm run dev
   ([src/game/particles.js](src/game/particles.js)) drift through both,
   deliberately kept to a fixed warm palette rather than tinted the same
   way — a sparkle the same hue as its background disappears.
+- **Sound effects**: short classic-platformer-style SFX
+  ([src/sound.js](src/sound.js), files in
+  [public/sounds/](public/sounds/)) for jumping, landing a hit, taking
+  damage, running out of hearts, a boss throwing fire, and clearing a
+  level/the dragon fight, plus a soft click on every button and map node.
+  Drop in a different `.wav`/`.mp3` and repoint `FILES` in `sound.js` to
+  swap any of them.
 
 ## Saving progress (Supabase)
 

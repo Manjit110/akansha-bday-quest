@@ -6,6 +6,7 @@ import { ensureWandTexture } from './weapon.js';
 import { player as playerConfig } from '../data/player.js';
 import { friends } from '../data/friends.js';
 import { assetUrl } from '../assetPath.js';
+import { playSound } from '../sound.js';
 
 const W = 960;
 const H = 540;
@@ -72,23 +73,37 @@ const ALLY_ROWS = 4;
 const ALLY_ROW_Y_START = 138;
 const ALLY_ROW_Y_STEP = 52;
 
-// Individual floating podiums scattered across four rows, staggered so
-// alternating rows don't line up into a rigid grid -- reads as everyone
-// having claimed their own spot rather than standing shoulder to shoulder.
-// Kept below the jail cell (JAIL_Y=84, bottom edge ~132) so nobody's
-// standing in front of Akansha's own photo.
-function allyLayout(index, total) {
-  const perRow = Math.ceil(total / ALLY_ROWS);
-  const row = Math.floor(index / perRow);
-  const indexInRow = index % perRow;
-  const itemsInRow = Math.min(perRow, total - row * perRow);
+// A keep-out zone around the jail cell, in the row nearest it -- an
+// evenly-spaced grid alone put one friend's slot at exactly JAIL_X, and
+// she ended up standing right at the foot of Akansha's own cell.
+const JAIL_KEEPOUT_X_MIN = JAIL_X - JAIL_W / 2 - 24;
+const JAIL_KEEPOUT_X_MAX = JAIL_X + JAIL_W / 2 + 24;
+const JAIL_KEEPOUT_Y_MAX = JAIL_Y + JAIL_H / 2 + 30;
+
+// Individual floating podiums scattered across four staggered rows, so
+// everyone reads as having claimed their own spot rather than standing
+// shoulder to shoulder. Builds one extra slot per row (more candidate
+// positions than friends) specifically so any slot landing inside the
+// jail keep-out zone can just be dropped instead of needing a friend
+// reassigned by hand -- stays correct even if the roster size changes.
+function buildAllyPositions(total) {
+  const perRow = Math.ceil(total / ALLY_ROWS) + 1;
   const marginX = 60;
   const usableW = W - marginX * 2;
-  const spacing = usableW / itemsInRow;
-  const stagger = row % 2 === 1 ? spacing / 2 : 0;
-  const x = Math.min(W - marginX, marginX + stagger + (indexInRow + 0.5) * spacing);
-  const y = ALLY_ROW_Y_START + row * ALLY_ROW_Y_STEP;
-  return { x, y };
+  const spacing = usableW / perRow;
+
+  const positions = [];
+  for (let row = 0; row < ALLY_ROWS; row++) {
+    const y = ALLY_ROW_Y_START + row * ALLY_ROW_Y_STEP;
+    const stagger = row % 2 === 1 ? spacing / 2 : 0;
+    for (let col = 0; col < perRow; col++) {
+      const x = Math.min(W - marginX, marginX + stagger + (col + 0.5) * spacing);
+      const inKeepout = y < JAIL_KEEPOUT_Y_MAX && x > JAIL_KEEPOUT_X_MIN && x < JAIL_KEEPOUT_X_MAX;
+      if (inKeepout) continue;
+      positions.push({ x, y });
+    }
+  }
+  return positions.slice(0, total);
 }
 
 export default class BossScene extends Phaser.Scene {
@@ -249,7 +264,8 @@ export default class BossScene extends Phaser.Scene {
   // allyVolley) -- this is what guarantees the fight finishes even if she
   // never fires a single shot herself.
   buildAllySquad() {
-    this.allies = friends.map((friend, i) => this.buildAlly(friend, allyLayout(i, friends.length)));
+    const positions = buildAllyPositions(friends.length);
+    this.allies = friends.map((friend, i) => this.buildAlly(friend, positions[i]));
   }
 
   // Same hero figure + wand the player wears everywhere else in the game
@@ -441,6 +457,7 @@ export default class BossScene extends Phaser.Scene {
 
   spawnFireball() {
     if (this.finished) return;
+    playSound('bossFire', { volume: 0.35 });
     // Aimed at the player and fired sideways, matching the mini-boss
     // fireballs in the regular levels (see LevelScene's bossThrow) --
     // this used to launch with velocity (~0, 260), which is almost pure
@@ -480,6 +497,10 @@ export default class BossScene extends Phaser.Scene {
 
   tryHitDragon() {
     if (!this.vulnerable || this.finished) return;
+    // Only the player's own hits get a sound here, not the squad's -- the
+    // automated volley lands one every ~260ms, which would turn into
+    // constant noise for the whole fight if it played this too.
+    playSound('impact', { volume: 0.45 });
     // This hit is what's ending the vulnerable window now, so the window's
     // own 1400ms timeout must not *also* fire later and retract the dragon
     // a second time (see swoop()).
@@ -509,7 +530,12 @@ export default class BossScene extends Phaser.Scene {
   damagePlayer() {
     if (this.invulnerable || this.finished) return;
     this.hearts -= 1;
-    if (this.hearts <= 0) this.hearts = 3;
+    if (this.hearts <= 0) {
+      this.hearts = 3;
+      playSound('reset', { volume: 0.5 });
+    } else {
+      playSound('hit', { volume: 0.45 });
+    }
     this.callbacks.onHeartsChange(this.hearts);
     this.invulnerable = true;
     this.player.setPosition(120, GROUND_Y - 100);
@@ -562,6 +588,7 @@ export default class BossScene extends Phaser.Scene {
     if (jumpKey && onGround && !this.jumpLock) {
       player.body.setVelocityY(-560);
       this.jumpLock = true;
+      playSound('jump', { volume: 0.3 });
     }
     if (!jumpKey) this.jumpLock = false;
 

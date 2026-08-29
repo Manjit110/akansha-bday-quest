@@ -600,6 +600,23 @@ async function checkDragonFight(page, pageErrors) {
     pass(`dragon fight: full rescued squad (${setup.allyCount}) and jail cell are on screen, dragonHP=${setup.dragonHP}`);
   }
 
+  // A real bug: an evenly-spaced grid alone put one ally's slot at exactly
+  // the jail cell's own x, and she ended up standing right at the foot of
+  // Akansha's cell. Confirm no ally's podium falls inside the cell's
+  // on-screen footprint.
+  const overlap = await page.evaluate(() => {
+    const scene = window.__testGame.scene.getScene('BossScene');
+    const jailLeft = 480 - 118 / 2 - 10;
+    const jailRight = 480 + 118 / 2 + 10;
+    const jailBottom = 84 + 96 / 2 + 10;
+    return scene.allies.filter((a) => a.x > jailLeft && a.x < jailRight && a.y < jailBottom).map((a) => ({ x: a.x, y: a.y }));
+  });
+  if (overlap.length > 0) {
+    fail(`dragon fight: ${overlap.length} ally podium(s) overlap the jail cell: ${JSON.stringify(overlap)}`);
+  } else {
+    pass('dragon fight: no ally is standing at the foot of the jail cell');
+  }
+
   // The squad's volley is a real background timer, not just a method she
   // can call -- confirm it lands damage on its own with the page just
   // sitting there, exactly like a player who never touches a key. The

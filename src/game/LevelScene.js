@@ -8,6 +8,7 @@ import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
 import { getLevelTheme } from './levelThemes.js';
 import { assetUrl } from '../assetPath.js';
+import { playSound } from '../sound.js';
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -308,6 +309,7 @@ export default class LevelScene extends Phaser.Scene {
 
   bossThrow(guardian) {
     if (!guardian.active || this.enteringFort) return;
+    playSound('bossFire', { volume: 0.4 });
     const dir = this.player.x < guardian.x ? -1 : 1;
     const fb = this.add.circle(guardian.x, guardian.y - 4, 7, 0xff6b35);
     fb.setStrokeStyle(2, 0xffd166, 0.8);
@@ -394,6 +396,7 @@ export default class LevelScene extends Phaser.Scene {
 
   damageEnemy(enemy) {
     if (!enemy.active || enemy.justHit) return;
+    playSound('impact', { volume: 0.45 });
     if (enemy.isBoss) {
       enemy.hp -= 1;
       enemy.justHit = true;
@@ -434,7 +437,12 @@ export default class LevelScene extends Phaser.Scene {
   damagePlayer() {
     if (this.invulnerable) return;
     this.hearts -= 1;
-    if (this.hearts <= 0) this.hearts = 3;
+    if (this.hearts <= 0) {
+      this.hearts = 3;
+      playSound('reset', { volume: 0.5 });
+    } else {
+      playSound('hit', { volume: 0.45 });
+    }
     this.callbacks.onHeartsChange(this.hearts);
     this.respawnPlayer();
   }
@@ -472,6 +480,7 @@ export default class LevelScene extends Phaser.Scene {
       if (jumpKey && grounded && !this.jumpLock) {
         player.body.setVelocityY(-560);
         this.jumpLock = true;
+        playSound('jump', { volume: 0.3 });
       }
       if (!jumpKey) this.jumpLock = false;
 

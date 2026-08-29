@@ -3,6 +3,7 @@ import './style.css';
 import { friends, finaleNote } from './data/friends.js';
 import { assetUrl } from './assetPath.js';
 import { loadProgress, saveProgress } from './progressStore.js';
+import { playSound } from './sound.js';
 import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
 import RevealRoomScene from './game/RevealRoomScene.js';
@@ -63,6 +64,16 @@ const codeError = document.getElementById('code-error');
 function showScreen(id) {
   screens.forEach((s) => s.classList.toggle('active', s.id === id));
 }
+
+// One delegated listener covers every button/map-node click in the game
+// (title, name entry, map, replay modal, code entry) without needing a
+// playSound() call wired into each individual handler. The shoot button
+// fires its own rapid-fire pointerdown separately and is excluded here so
+// it doesn't double up with a click sound on every shot.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#btn-shoot')) return;
+  if (e.target.closest('button, .map-node, .boss-node')) playSound('click', { volume: 0.35 });
+});
 
 // Wherever the game returns to "home" (quitting a level, finishing one,
 // closing the finale) -- the map if we know who's playing, otherwise the
@@ -262,6 +273,7 @@ function startLevel(index) {
     callbacks: {
       onHeartsChange: renderHearts,
       onComplete: (idx) => {
+        playSound('clear');
         state.unlocked = Math.max(state.unlocked, idx + 1);
         persistProgress();
         game.scene.stop('RevealRoomScene');
@@ -303,6 +315,7 @@ function startBoss() {
       onBossStart: renderBossHP,
       onDragonHit: renderBossHP,
       onVictory: () => {
+        playSound('clear', { volume: 0.7 });
         state.bossDefeated = true;
         persistProgress();
         game.scene.stop('BossScene');
@@ -376,6 +389,7 @@ function showFinale() {
 async function submitName(rawName) {
   const name = rawName.trim();
   if (!name) {
+    playSound('hit', { volume: 0.4 });
     nameError.textContent = 'Please type your name.';
     return;
   }
@@ -427,6 +441,7 @@ codeForm.addEventListener('submit', (e) => {
     codeForm.classList.add('hidden');
     renderMap();
   } else {
+    playSound('hit', { volume: 0.4 });
     codeError.textContent = "That code isn't right.";
   }
 });
