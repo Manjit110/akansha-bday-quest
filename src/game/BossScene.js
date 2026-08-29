@@ -48,18 +48,34 @@ const JAIL_X = 480;
 const JAIL_Y = 84;
 const JAIL_W = 118;
 const JAIL_H = 96;
+// Each ally is the same hero figure the player controls everywhere else,
+// scaled down and tinted/faced per friend, so "gun-toting little person"
+// reads consistently across the whole game rather than a different
+// avatar style just for this scene.
+const ALLY_SCALE = 0.6;
+// The drawn head is tiny at ALLY_SCALE; enlarge the photo well past it so
+// a face is actually legible, same trick LevelScene uses for the player.
+const ALLY_FACE_SCALE = 2.3;
+const ALLY_ROWS = 4;
+const ALLY_ROW_Y_START = 138;
+const ALLY_ROW_Y_STEP = 52;
 
-// Two rows of shelves spanning the arena width, kept below the jail cell
-// (JAIL_Y=84) so nobody's standing in front of Akansha's own photo.
+// Individual floating podiums scattered across four rows, staggered so
+// alternating rows don't line up into a rigid grid -- reads as everyone
+// having claimed their own spot rather than standing shoulder to shoulder.
+// Kept below the jail cell (JAIL_Y=84, bottom edge ~132) so nobody's
+// standing in front of Akansha's own photo.
 function allyLayout(index, total) {
-  const perRow = Math.ceil(total / 2);
-  const row = index < perRow ? 0 : 1;
-  const col = index < perRow ? index : index - perRow;
-  const rowCount = row === 0 ? perRow : total - perRow;
-  const marginX = 55;
+  const perRow = Math.ceil(total / ALLY_ROWS);
+  const row = Math.floor(index / perRow);
+  const indexInRow = index % perRow;
+  const itemsInRow = Math.min(perRow, total - row * perRow);
+  const marginX = 60;
   const usableW = W - marginX * 2;
-  const x = marginX + (col + 0.5) * (usableW / rowCount);
-  const y = row === 0 ? 150 : 212;
+  const spacing = usableW / itemsInRow;
+  const stagger = row % 2 === 1 ? spacing / 2 : 0;
+  const x = Math.min(W - marginX, marginX + stagger + (indexInRow + 0.5) * spacing);
+  const y = ALLY_ROW_Y_START + row * ALLY_ROW_Y_STEP;
   return { x, y };
 }
 
@@ -210,7 +226,7 @@ export default class BossScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 
-  // The full rescued squad, perched on little floating shelves, taking
+  // The full rescued squad, each on their own floating podium, taking
   // automated potshots at the dragon throughout the fight (see
   // allyVolley) -- this is what guarantees the fight finishes even if she
   // never fires a single shot herself.
@@ -218,28 +234,39 @@ export default class BossScene extends Phaser.Scene {
     this.allies = friends.map((friend, i) => this.buildAlly(friend, allyLayout(i, friends.length)));
   }
 
+  // Same hero figure + wand the player wears everywhere else in the game
+  // (see LevelScene), just smaller and standing still -- reads as "one of
+  // her friends, armed, holding position" rather than a different avatar
+  // style invented just for this scene. Faces toward the dragon.
   buildAlly(friend, pos) {
     const { x, y } = pos;
     const color = Phaser.Display.Color.HexStringToColor(friend.color).color;
-    this.add.rectangle(x, y + 17, 38, 6, 0x241542, 0.9).setStrokeStyle(1, 0x140b28, 0.6);
+    const dir = x < DRAGON_X ? 1 : -1;
+
+    this.add.ellipse(x, y + 29, 32, 7, 0x000000, 0.28);
+    this.add.rectangle(x, y + 25, 28, 6, 0x241542, 0.95).setStrokeStyle(1, 0x140b28, 0.6);
+
+    const sprite = this.add.sprite(x, y, 'hero-idle');
+    sprite.setScale(ALLY_SCALE);
+    sprite.setFlipX(dir === -1);
 
     const photoKey = `face-friend-${friend.id}`;
     if (friend.photoSolo && this.textures.exists(photoKey)) {
-      const overlay = createFaceOverlay(this, { textureKey: photoKey, radius: 14 });
-      overlay.setPosition(x, y);
+      const heroHead = headGeometry(HERO_SIZE);
+      const face = createFaceOverlay(this, { textureKey: photoKey, radius: heroHead.radius * ALLY_SCALE * ALLY_FACE_SCALE });
+      face.setPosition(x, y + heroHead.offsetY * ALLY_SCALE);
     } else {
-      this.add.circle(x, y, 14, color);
-      this.add
-        .text(x, y, friend.name.trim().charAt(0).toUpperCase() || '?', {
-          fontFamily: 'Press Start 2P, monospace',
-          fontSize: '11px',
-          color: '#2b1140',
-        })
-        .setOrigin(0.5);
+      // No photo yet -- tint the figure itself in her color instead of a
+      // separate placeholder shape, same "still reads as her" fallback
+      // spirit as the rest of the game's photo-optional avatars.
+      sprite.setTint(color);
     }
 
-    const ring = this.add.circle(x, y, 14, 0x000000, 0).setStrokeStyle(2, color, 0.9);
-    return { x, y, color, ring };
+    const wand = this.add.image(x + dir * 7 * ALLY_SCALE, y + 20 * ALLY_SCALE, 'wand');
+    wand.setScale(ALLY_SCALE);
+    wand.setFlipX(dir === -1);
+
+    return { x, y, color, sprite, wand };
   }
 
   // Fires from the next friend in the squad, round-robin. Purely a visual
@@ -251,9 +278,10 @@ export default class BossScene extends Phaser.Scene {
     const ally = this.allies[this.allyTurn % this.allies.length];
     this.allyTurn++;
 
-    this.tweens.add({ targets: ally.ring, scale: 1.6, alpha: 0.25, duration: 140, yoyo: true });
+    this.tweens.add({ targets: ally.wand, scaleX: ALLY_SCALE * 1.7, scaleY: ALLY_SCALE * 1.7, duration: 120, yoyo: true });
+    this.tweens.add({ targets: ally.sprite, alpha: 0.55, duration: 90, yoyo: true });
 
-    const proj = this.add.circle(ally.x, ally.y, 5, ally.color);
+    const proj = this.add.circle(ally.wand.x, ally.wand.y, 5, ally.color);
     this.tweens.add({
       targets: proj,
       x: this.dragonGroup.x,

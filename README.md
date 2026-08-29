@@ -14,13 +14,13 @@ impression, where they met, impression now, and a quality she loves
 about her — tapped through at her own pace, with a photo of the two of
 them together at the bottom of the room throughout. The last level is
 a full dragon boss fight for Akansha's own cage, held above the arena
-throughout — every rescued friend shows up too, perched on floating
-shelves around the fight, firing on the dragon automatically the whole
-time. It swoops down and throws fire to dodge, and she can shoot back
-with the same wand from the regular levels while its belly is exposed,
-but the squad's own volley alone is enough to finish the fight even if
-she never fires a shot. Defeating it swings the cage open and opens a
-celebration screen with everyone together.
+throughout — every rescued friend shows up too, each on their own
+floating podium around the fight, armed with the same wand she carries
+and firing on the dragon automatically the whole time. It swoops down
+and throws fire to dodge, and she can shoot back herself while its belly
+is exposed, but the squad's own volley alone is enough to finish the
+fight even if she never fires a shot. Defeating it swings the cage open
+and opens a celebration screen with everyone together.
 
 Built with [Phaser 3](https://phaser.io/) for the platforming, the fort/
 gate, and the memory room, with plain HTML/CSS for the title, map, and
