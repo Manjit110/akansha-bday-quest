@@ -5,7 +5,7 @@
 // at once (see BossScene's ally squad), and that many simultaneous masks
 // measurably dropped the frame rate. Baking once up front and reusing a
 // plain Image after that avoids the per-frame cost entirely.
-export function ensureCirclePhotoTexture(scene, { key, sourceKey, diameter }) {
+export function ensureCirclePhotoTexture(scene, { key, sourceKey, diameter, fit = 'cover' }) {
   if (!sourceKey || !scene.textures.exists(sourceKey)) return null;
   if (scene.textures.exists(key)) return key;
 
@@ -13,17 +13,20 @@ export function ensureCirclePhotoTexture(scene, { key, sourceKey, diameter }) {
   maskShape.fillStyle(0xffffff);
   maskShape.fillCircle(diameter / 2, diameter / 2, diameter / 2);
 
-  // Scale to *cover* the circle (like CSS object-fit: cover) instead of
-  // stretching to a square -- a non-square source (arbitrary monster
-  // art, not just cropped headshots) would otherwise come out visibly
-  // squashed along whichever axis is shorter.
+  // 'cover' (default, like CSS object-fit: cover) scales to fill the
+  // circle completely, cropping whichever axis overflows -- right for a
+  // cropped headshot where some edge margin loss doesn't matter. 'contain'
+  // scales to fit the whole image inside instead, cropping nothing (may
+  // leave a little empty circle around a very non-square source) -- for
+  // full illustrations like the level mini-bosses, where cropping into the
+  // art itself would cut the monster off instead of just trimming margin.
   const source = scene.textures.get(sourceKey).getSourceImage();
   const natW = source.width || diameter;
   const natH = source.height || diameter;
-  const coverScale = Math.max(diameter / natW, diameter / natH);
+  const scale = fit === 'contain' ? Math.min(diameter / natW, diameter / natH) : Math.max(diameter / natW, diameter / natH);
 
   const image = scene.make.image({ x: diameter / 2, y: diameter / 2, key: sourceKey, add: false });
-  image.setDisplaySize(natW * coverScale, natH * coverScale);
+  image.setDisplaySize(natW * scale, natH * scale);
   image.setMask(maskShape.createGeometryMask());
 
   const rt = scene.make.renderTexture({ width: diameter, height: diameter }, false);

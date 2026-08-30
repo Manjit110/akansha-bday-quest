@@ -25,7 +25,12 @@ const PLAYER_FACE_SCALE = 1.8;
 // opaque background baked into the source (several of these are plain
 // .jpg, which can't have transparency at all) reads as a deliberate
 // framed portrait instead of a stray rectangle floating in the scene.
-const MONSTER_BADGE_SIZE = 76;
+// Fit as 'contain', not the default 'cover' -- these are full
+// illustrations of the monster itself, not headshots with margin to
+// spare, so cropping to fill the circle was cutting the art off instead
+// of just trimming background. A bigger circle than a cropped photo would
+// need, since 'contain' can't fill every corner of a non-square source.
+const MONSTER_BADGE_SIZE = 96;
 const SHOOT_COOLDOWN = 380;
 const BOSS_HP = 3;
 
@@ -305,6 +310,7 @@ export default class LevelScene extends Phaser.Scene {
       key: `monster-badge-${this.levelIndex}`,
       sourceKey: `monster-src-${this.levelIndex}`,
       diameter: MONSTER_BADGE_SIZE,
+      fit: 'contain',
     });
 
     const guardX = cfg.flagX - 110;
