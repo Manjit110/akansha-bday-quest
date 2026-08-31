@@ -98,13 +98,68 @@ function drawHair(g, { cx, headCy, headR, swing }) {
   );
 }
 
+// Graphics.save()/translateCanvas()/rotateCanvas() turned out unreliable
+// for this under the WebGL renderer (Phaser.AUTO resolves to it here) --
+// legs and arms drawn through that pivot rendered collapsed/misplaced
+// instead of actually rotating. Plain trigonometry + fillPoints (already
+// used for the torso taper above, and known-good there) sidesteps it
+// entirely: rotate each corner by hand around the hip/shoulder point.
+function rotatePoint(originX, originY, angle, localX, localY) {
+  const cosA = Math.cos(angle);
+  const sinA = Math.sin(angle);
+  return { x: originX + localX * cosA - localY * sinA, y: originY + localX * sinA + localY * cosA };
+}
+
+// A width-wide, (y0->y1)-long rectangle, rotated by `angle` around
+// (originX, originY) -- (0,0) in local space is that pivot, +y runs along
+// the limb away from the body, matching how a hip/shoulder joint actually
+// swings.
+function rotatedRect(originX, originY, angle, width, y0, y1) {
+  const hw = width / 2;
+  return [
+    rotatePoint(originX, originY, angle, -hw, y0),
+    rotatePoint(originX, originY, angle, hw, y0),
+    rotatePoint(originX, originY, angle, hw, y1),
+    rotatePoint(originX, originY, angle, -hw, y1),
+  ];
+}
+
+function drawLeg(g, { hipX, hipY, angle, legLen, legW, bootH, color }) {
+  g.fillStyle(color, 1);
+  g.fillPoints(rotatedRect(hipX, hipY, angle, legW, 0, legLen), true);
+  g.fillStyle(BOOT_COLOR, 1);
+  g.fillPoints(rotatedRect(hipX, hipY, angle, legW, legLen - bootH, legLen), true);
+}
+
+function drawArm(g, { shoulderX, shoulderY, angle, armLen, armW, color, bicep }) {
+  g.fillStyle(color, 1);
+  g.fillPoints(rotatedRect(shoulderX, shoulderY, angle, armW, 0, armLen), true);
+  if (bicep) {
+    const c = rotatePoint(shoulderX, shoulderY, angle, 0, armW * 0.6);
+    g.fillCircle(c.x, c.y, armW * 0.62);
+  }
+}
+
+// How far the stride/pump swings each step -- big enough to read as an
+// actual run at this tiny size, not just a flicker.
+const STRIDE_ANGLE = 0.5;
+const PUMP_ANGLE = 0.55;
+// The gun arm holds this same forward angle in every frame, idle included
+// -- constantly aimed and ready, the one clearly "FPS/run-and-gun" detail
+// that doesn't depend on the animation frame at all.
+const GUN_ARM_ANGLE = 0.55;
+
 function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat, gender }) {
   const { width: w, height: h, topMargin } = size;
   const cx = w / 2;
   const headR = w * 0.3;
   const headCy = headR + topMargin;
   const torsoTop = headCy + headR - 2;
-  const torsoH = h * 0.32;
+  // Slimmer torso fraction than the original (h*0.32) to free up more
+  // height for the legs below -- the old proportions left them only ~13%
+  // of the figure's total height, barely enough to read as legs at all,
+  // let alone stride through a real pose.
+  const torsoH = h * 0.27;
   const torsoW = w * 0.5;
   const torsoBottom = torsoTop + torsoH;
   // Male reads bulkier through the arms (a small deltoid bump added below);
@@ -112,41 +167,42 @@ function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat
   // for female, and both get a dark boot cap instead of the old flat
   // single-color leg.
   const armW = w * (gender === 'male' ? 0.24 : gender === 'female' ? 0.17 : 0.2);
-  const armH = h * 0.27;
+  const armLen = h * 0.22;
   const legW = w * (gender === 'male' ? 0.25 : gender === 'female' ? 0.2 : 0.24);
-  const legH = h - torsoBottom - 2;
-  const bootH = Math.max(3, legH * 0.22);
+  const legLen = h - torsoBottom - 2;
+  const bootH = Math.max(3, legLen * 0.22);
+  const bicep = gender === 'male';
 
-  // step swings limbs in opposite pairs: -1 / 0 / 1
-  const swing = step * (h * 0.05);
+  const hipY = torsoBottom - 2;
+  const hipRightX = cx + torsoW * 0.22;
+  const hipLeftX = cx - torsoW * 0.22;
+  const shoulderY = torsoTop + 3;
+  const shoulderRightX = cx + torsoW * 0.42;
+  const shoulderLeftX = cx - torsoW * 0.42;
 
-  const drawLeg = (lx, ly) => {
-    g.fillStyle(legColor, 1);
-    g.fillRoundedRect(lx, ly, legW, legH, legW / 2);
-    g.fillStyle(BOOT_COLOR, 1);
-    g.fillRoundedRect(lx, ly + legH - bootH, legW, bootH, legW * 0.35);
-  };
+  // back (right-side) leg, then torso, then front (left-side) leg overlaps
+  // it -- opposite phase from the right leg for an actual alternating gait.
+  drawLeg(g, { hipX: hipRightX, hipY, angle: step * STRIDE_ANGLE, legLen, legW, bootH, color: legColor });
 
-  const drawArm = (ax, ay) => {
-    g.fillStyle(armColor, 1);
-    g.fillRoundedRect(ax, ay, armW, armH, armW / 2);
-    if (gender === 'male') {
-      g.fillCircle(ax + armW / 2, ay + armW * 0.4, armW * 0.62);
-    }
-  };
-
-  // back arm + leg first so the front pair overlaps them
-  drawArm(cx + torsoW / 2 - armW * 0.35, torsoTop + 2 - swing);
-  drawLeg(cx + torsoW * 0.16, torsoBottom - 2 + swing);
-
-  // torso
   drawTorso(g, { cx, torsoTop, torsoH, torsoW, color: torso, gender });
 
-  // front leg + arm
-  drawLeg(cx - torsoW * 0.16 - legW, torsoBottom - 2 - swing);
-  drawArm(cx - torsoW / 2 - armW * 0.65, torsoTop + 2 + swing);
+  drawLeg(g, { hipX: hipLeftX, hipY, angle: -step * STRIDE_ANGLE, legLen, legW, bootH, color: legColor });
 
-  if (gender === 'female') drawHair(g, { cx, headCy, headR, swing });
+  // Off-hand pumps opposite the gun arm, in phase with the back leg, like a
+  // real running counterbalance. Biased away from the gun arm's fixed
+  // forward angle (GUN_ARM_ANGLE) so the two don't run near-parallel and
+  // blur into one shape, which is what a small idle-forward lean did.
+  drawArm(g, {
+    shoulderX: shoulderLeftX,
+    shoulderY,
+    angle: -0.15 + step * PUMP_ANGLE,
+    armLen,
+    armW,
+    color: armColor,
+    bicep,
+  });
+
+  if (gender === 'female') drawHair(g, { cx, headCy, headR, swing: step });
 
   // head
   g.fillStyle(skin, 1);
@@ -163,6 +219,13 @@ function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat
   }
 
   if (hat) drawPartyHat(g, cx, headCy, headR);
+
+  // The gun arm, drawn last so it's always topmost -- constantly extended
+  // forward at the same angle regardless of frame (see GUN_ARM_ANGLE),
+  // roughly where the separately-rendered wand already sits (see the +14/
+  // +12 offset LevelScene/BossScene position it at each frame), so the
+  // figure actually looks like it's the one holding it.
+  drawArm(g, { shoulderX: shoulderRightX, shoulderY, angle: GUN_ARM_ANGLE, armLen, armW, color: armColor, bicep });
 }
 
 function buildWalkFrames(scene, baseKey, size, colors) {
@@ -186,9 +249,13 @@ export function ensureHeroTexture(scene, gender = 'male') {
   const baseKey = `hero-${gender}`;
   buildWalkFrames(scene, baseKey, HERO_SIZE, {
     skin: 0xffd9a0,
+    // Pants deliberately don't share a hue family with the torso above
+    // them (brown vs. olive, slate vs. pink) -- close-hue pairs like the
+    // original olive-on-olive nearly vanished into each other at this
+    // size, reading as "no legs" rather than two separate garments.
     torso: gender === 'female' ? 0xff8fab : 0x606c38,
     armColor: 0xffd9a0,
-    legColor: gender === 'female' ? 0x4a4e69 : 0x3a4a2b,
+    legColor: gender === 'female' ? 0x4a4e69 : 0x4a3c2a,
     angry: false,
     hat: true,
     gender,
