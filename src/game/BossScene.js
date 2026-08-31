@@ -3,10 +3,8 @@ import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './h
 import { createFaceOverlay } from './faceOverlay.js';
 import { ensureCirclePhotoTexture } from './circlePhoto.js';
 import { ensureWandTexture } from './weapon.js';
-import { createThoughtCloud } from './thoughtCloud.js';
 import { player as playerConfig } from '../data/player.js';
 import { friends } from '../data/friends.js';
-import { bossQuotes } from '../data/bossQuotes.js';
 import { assetUrl } from '../assetPath.js';
 import { playSound } from '../sound.js';
 
@@ -53,9 +51,6 @@ const DRAGON_LOW_Y = 400;
 const DIVE_LANE_MIN_X = 380;
 const DIVE_LANE_MAX_X = 580;
 const DIVE_LANE_MARGIN = 30;
-// How far apart each ally's thought cloud starts, in showBossQuotes() --
-// keeps only a handful visible at once instead of all 19 piling up.
-const BOSS_QUOTE_GAP_MS = 1700;
 // Where the belly/weak-point sits relative to the dragon container's own
 // origin -- kept as one constant so the decorative belly and the physics
 // weak-point circle stay lined up.
@@ -234,7 +229,6 @@ export default class BossScene extends Phaser.Scene {
 
     this.buildJailCell();
     this.buildAllySquad();
-    this.showBossQuotes();
 
     this.callbacks.onHeartsChange(this.hearts);
     this.callbacks.onBossStart(DRAGON_HP);
@@ -299,25 +293,6 @@ export default class BossScene extends Phaser.Scene {
   buildAllySquad() {
     const positions = buildAllyPositions(friends.length);
     this.allies = friends.map((friend, i) => this.buildAlly(friend, positions[i]));
-  }
-
-  // A one-line reaction from each rescued friend the moment the dragon
-  // fight opens (they're all already in frame -- this scene never scrolls),
-  // in a thought cloud above their own podium. See src/data/bossQuotes.js
-  // for the actual lines. With 19 of them and the squad standing shoulder
-  // to shoulder, popping all 19 in at once turned into one unreadable wall
-  // of overlapping bubbles -- staggering their start by BOSS_QUOTE_GAP_MS
-  // each keeps only a handful on screen at any moment instead.
-  showBossQuotes() {
-    this.allies.forEach((ally, i) => {
-      const quote = bossQuotes[friends[i].id];
-      if (!quote) return;
-      const headTopY = ally.y - (HERO_SIZE.height * ALLY_SCALE) / 2 - 8;
-      this.time.delayedCall(i * BOSS_QUOTE_GAP_MS, () => {
-        if (this.finished) return;
-        createThoughtCloud(this, ally.x, headTopY, quote);
-      });
-    });
   }
 
   // Same hero figure + wand the player wears everywhere else in the game

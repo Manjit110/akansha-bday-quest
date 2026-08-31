@@ -8,8 +8,10 @@ import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
 import { getLevelTheme } from './levelThemes.js';
 import { assetUrl } from '../assetPath.js';
-import { playSound } from '../sound.js';
+import { playSound, playMusic, stopMusic } from '../sound.js';
 import { MONSTER_IMAGES } from '../data/monsterImages.js';
+import { bossQuotes } from '../data/bossQuotes.js';
+import { createThoughtCloud } from './thoughtCloud.js';
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -172,6 +174,23 @@ export default class LevelScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE,F');
 
     this.callbacks.onHeartsChange(this.hearts);
+
+    // Subtle background music for every regular level -- kept well under
+    // the SFX volumes (jump/hit/impact are all 0.3-0.5) so it never
+    // competes with them. Stopped on this scene's own 'shutdown' (fired by
+    // every exit path: finishing the level into RevealRoomScene, or the
+    // Map/Quit button) rather than anywhere level-specific, so it can never
+    // keep playing into the memory room, the map, or the dragon fight --
+    // none of those ever call playMusic() themselves.
+    playMusic('levelBackground', { volume: 0.14 });
+    this.events.once('shutdown', () => stopMusic());
+
+    // This level's own one-line reaction (see src/data/bossQuotes.js,
+    // keyed by friend id) to spotting its mini-boss -- shown once, the
+    // moment the guardian actually scrolls into view (see update()), not
+    // at level start, since she usually can't see it yet from the spawn.
+    this.bossQuote = bossQuotes[this.friend.id] || null;
+    this.bossQuoteShown = false;
   }
 
   // Horizontal stone courses with offset mortar joints -- reads as
@@ -559,6 +578,17 @@ export default class LevelScene extends Phaser.Scene {
         pip.x = this.bossGuardian.x - 14 + i * 14;
       });
       if (this.bossRing) this.bossRing.x = this.bossGuardian.x;
+
+      // Fires once, the moment the guardian actually scrolls into the
+      // camera's view -- checking worldView rather than just "level
+      // started" since she spawns well before it's anywhere on screen.
+      if (!this.bossQuoteShown && this.bossQuote) {
+        const view = this.cameras.main.worldView;
+        if (this.bossGuardian.x > view.x && this.bossGuardian.x < view.right) {
+          this.bossQuoteShown = true;
+          createThoughtCloud(this, this.bossQuote, this.player, -34, 16);
+        }
+      }
     }
 
     // enemy patrol turnaround

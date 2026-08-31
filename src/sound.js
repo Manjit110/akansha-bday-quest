@@ -11,8 +11,12 @@ const FILES = {
   reset: '/sounds/smb_gameover.wav',
   bossFire: '/sounds/smb_bowserfire.wav',
   impact: '/sounds/smb_breakblock.wav',
-  click: '/sounds/smb_pause.wav',
+  click: '/sounds/in-game-click.wav',
   clear: '/sounds/smb_stage_clear.wav',
+};
+
+const MUSIC_FILES = {
+  levelBackground: '/sounds/background-music.mp3',
 };
 
 const cache = {};
@@ -39,4 +43,39 @@ export function playSound(key, { volume = 0.5 } = {}) {
   } catch {
     /* ignore -- never let a sound effect break the game */
   }
+}
+
+// A single looping background track, kept subtle under the SFX above --
+// only one plays at a time, so starting a new one (or the same one again)
+// always stops whatever's currently playing first rather than layering.
+// LevelScene starts this on create() and stops it on its own 'shutdown'
+// event, so it plays through every regular level and falls silent the
+// moment she leaves one -- the memory room, the map, and the dragon fight
+// (BossScene) never call playMusic() at all, so it's just quiet there.
+let currentMusic = null;
+let currentMusicKey = null;
+
+export function playMusic(key, { volume = 0.5 } = {}) {
+  if (!MUSIC_FILES[key]) return;
+  if (currentMusicKey === key && currentMusic && !currentMusic.paused) return;
+  stopMusic();
+  try {
+    const audio = new Audio(assetUrl(MUSIC_FILES[key]));
+    audio.loop = true;
+    audio.volume = volume;
+    audio.play().catch(() => {});
+    currentMusic = audio;
+    currentMusicKey = key;
+  } catch {
+    /* ignore -- never let background music break the game */
+  }
+}
+
+export function stopMusic() {
+  if (currentMusic) {
+    currentMusic.pause();
+    currentMusic.currentTime = 0;
+  }
+  currentMusic = null;
+  currentMusicKey = null;
 }
