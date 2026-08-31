@@ -502,13 +502,29 @@ export default class LevelScene extends Phaser.Scene {
     if (this.invulnerable) return;
     this.hearts -= 1;
     if (this.hearts <= 0) {
-      this.hearts = 3;
+      // Out of hearts -- the whole level restarts from scratch (mini-boss
+      // back to full HP, patrol enemies back, spawn position) rather than
+      // just respawning her with whatever progress she'd already made
+      // against the mini-boss intact. A fresh scene.restart() gets all of
+      // that for free by re-running init()/create() exactly like a first
+      // visit to this level, instead of hand-resetting each piece of state.
       playSound('reset', { volume: 0.5 });
-    } else {
-      playSound('hit', { volume: 0.45 });
+      this.callbacks.onHeartsChange(0);
+      this.restartLevel();
+      return;
     }
+    playSound('hit', { volume: 0.45 });
     this.callbacks.onHeartsChange(this.hearts);
     this.respawnPlayer();
+  }
+
+  restartLevel() {
+    this.scene.restart({
+      levelIndex: this.levelIndex,
+      friend: this.friend,
+      totalLevels: this.totalLevels,
+      callbacks: this.callbacks,
+    });
   }
 
   respawnPlayer() {

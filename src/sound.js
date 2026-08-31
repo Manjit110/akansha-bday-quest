@@ -34,14 +34,30 @@ function getTemplate(key) {
 // squad's own volley) overlap instead of cutting each other off. Browsers
 // can refuse autoplay before any user interaction -- that's expected on
 // the very first click, so failures are swallowed rather than surfaced.
+// The clone played most recently for each key is kept in lastPlayed so a
+// long one (like the level-clear jingle) can be cut off with stopSound()
+// if she jumps straight into the next level before it's finished playing
+// on its own.
+const lastPlayed = {};
+
 export function playSound(key, { volume = 0.5 } = {}) {
   if (!FILES[key]) return;
   try {
     const audio = getTemplate(key).cloneNode(true);
     audio.volume = volume;
     audio.play().catch(() => {});
+    lastPlayed[key] = audio;
   } catch {
     /* ignore -- never let a sound effect break the game */
+  }
+}
+
+export function stopSound(key) {
+  const audio = lastPlayed[key];
+  if (audio) {
+    audio.pause();
+    audio.currentTime = 0;
+    delete lastPlayed[key];
   }
 }
 

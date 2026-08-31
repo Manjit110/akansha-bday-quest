@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 
-// A comic-style "thought cloud" -- a fluffy bubble with a trail of shrinking
-// circles leading down to whoever's thinking it. Used by LevelScene for the
-// level's own friend reacting the moment their mini-boss first comes into
-// view. Tracks `target` every frame rather than a fixed spot, since she's
-// usually still running toward the fort gate while it's showing.
+// A rounded-rectangle speech/thought box with a trail of shrinking circles
+// leading down to whoever's thinking it. Used by LevelScene for the level's
+// own friend reacting the moment their mini-boss first comes into view.
+// Tracks `target` every frame rather than a fixed spot, since she's usually
+// still running toward the fort gate while it's showing.
 const WRAP_WIDTH = 190;
 const PADDING_X = 14;
 const PADDING_Y = 11;
@@ -37,20 +37,6 @@ export function createThoughtCloud(scene, text, target, offsetY, fontSize) {
   const radius = Math.min(h / 2.2, 28);
   g.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
   g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
-  // Bumps scattered around the perimeter so it reads as a fluffy cloud
-  // instead of a flat dialog box.
-  const bumps = [
-    [-w / 2 + 2, -h / 2, h * 0.3],
-    [w / 2 - 2, -h / 2, h * 0.28],
-    [-w / 2, h / 2 - 2, h * 0.26],
-    [w / 2, h / 2 - 2, h * 0.3],
-    [0, -h / 2 + 1, h * 0.32],
-    [0, h / 2 - 1, h * 0.3],
-  ];
-  bumps.forEach(([bx, by, r]) => {
-    g.fillCircle(bx, by, r);
-    g.strokeCircle(bx, by, r);
-  });
 
   const container = scene.add.container(0, 0, [g, label]);
   container.setDepth(500);

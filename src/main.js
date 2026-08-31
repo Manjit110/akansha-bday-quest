@@ -3,7 +3,7 @@ import './style.css';
 import { friends, finaleNote } from './data/friends.js';
 import { assetUrl } from './assetPath.js';
 import { loadProgress, saveProgress } from './progressStore.js';
-import { playSound } from './sound.js';
+import { playSound, stopSound } from './sound.js';
 import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
 import RevealRoomScene from './game/RevealRoomScene.js';
@@ -263,6 +263,10 @@ function persistProgress() {
 }
 
 function startLevel(index) {
+  // The level-clear jingle can still be playing out from the level she just
+  // finished if she taps straight into the next one from the map -- cut it
+  // off rather than letting it bleed into the new level's own opening.
+  stopSound('clear');
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'flex';
   heartsEl.style.display = 'flex';
@@ -291,6 +295,7 @@ function startLevel(index) {
 // Revisiting an already-rescued friend from the map replays just the
 // memory room (photo + messages), skipping the level itself.
 function revisitFriend(index) {
+  stopSound('clear');
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'none';
   levelTitleEl.textContent = friends[index].name;
@@ -308,6 +313,7 @@ function revisitFriend(index) {
 }
 
 function startBoss() {
+  stopSound('clear');
   bossHpEl.style.display = 'flex';
   btnShoot.style.display = 'flex';
   levelTitleEl.textContent = '';
