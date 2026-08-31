@@ -3,8 +3,10 @@ import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './h
 import { createFaceOverlay } from './faceOverlay.js';
 import { ensureCirclePhotoTexture } from './circlePhoto.js';
 import { ensureWandTexture } from './weapon.js';
+import { createThoughtCloud } from './thoughtCloud.js';
 import { player as playerConfig } from '../data/player.js';
 import { friends } from '../data/friends.js';
+import { bossQuotes } from '../data/bossQuotes.js';
 import { assetUrl } from '../assetPath.js';
 import { playSound } from '../sound.js';
 
@@ -29,13 +31,31 @@ const PALETTE = {
 export const DRAGON_HP = 10;
 const HITS_PER_STAGE_MIN = 4;
 const HITS_PER_STAGE_MAX = 5;
-const DRAGON_X = 740;
-const DRAGON_HIGH_Y = 130;
+// The dragon patrols this whole band horizontally (see startPatrolFrom())
+// instead of hovering in one spot -- DRAGON_HIGH_Y sits below the jail cell
+// (JAIL_Y=84, bottom ~132) so it flies past the cage rather than through
+// it, and ALLY_ROW_Y_START (below) keeps the whole rescued squad clear of
+// its body while it's cruising.
+const DRAGON_HIGH_Y = 190;
+const DRAGON_PATROL_MIN_X = 170;
+const DRAGON_PATROL_MAX_X = 790;
+const DRAGON_PATROL_SPEED = 0.18; // px/ms
 // Low enough that its weak point lines up with a standing player's shoot
 // height (player.y+10, ~438 here) -- swooping to DRAGON_LOW_Y=300 like an
 // earlier version left the weak point roughly 100px above anything a
 // grounded shot could ever reach, so nothing thrown at it could land.
 const DRAGON_LOW_Y = 400;
+// The swoop dive (see swoop()) always targets an x inside this lane rather
+// than wherever the patrol happened to leave it -- keeps a corridor down
+// the middle that's reserved (see the ally position keep-out below) so the
+// dive from cruising altitude down to DRAGON_LOW_Y never has to cross
+// through an ally's column and clip through them on the way down.
+const DIVE_LANE_MIN_X = 380;
+const DIVE_LANE_MAX_X = 580;
+const DIVE_LANE_MARGIN = 30;
+// How far apart each ally's thought cloud starts, in showBossQuotes() --
+// keeps only a handful visible at once instead of all 19 piling up.
+const BOSS_QUOTE_GAP_MS = 1700;
 // Where the belly/weak-point sits relative to the dragon container's own
 // origin -- kept as one constant so the decorative belly and the physics
 // weak-point circle stay lined up.
@@ -70,8 +90,11 @@ const ALLY_SCALE = 0.6;
 // a face is actually legible, same trick LevelScene uses for the player.
 const ALLY_FACE_SCALE = 2.3;
 const ALLY_ROWS = 4;
-const ALLY_ROW_Y_START = 138;
-const ALLY_ROW_Y_STEP = 52;
+// Pushed well below DRAGON_HIGH_Y (190) so the squad sits entirely under
+// the dragon's cruising altitude instead of sharing its airspace -- the
+// old START (138) put row 1 almost exactly where the dragon hovered.
+const ALLY_ROW_Y_START = 280;
+const ALLY_ROW_Y_STEP = 42;
 
 // A keep-out zone around the jail cell, in the row nearest it -- an
 // evenly-spaced grid alone put one friend's slot at exactly JAIL_X, and
@@ -80,14 +103,20 @@ const JAIL_KEEPOUT_X_MIN = JAIL_X - JAIL_W / 2 - 24;
 const JAIL_KEEPOUT_X_MAX = JAIL_X + JAIL_W / 2 + 24;
 const JAIL_KEEPOUT_Y_MAX = JAIL_Y + JAIL_H / 2 + 30;
 
+// Mirrors DIVE_LANE_MIN_X/MAX_X above -- no ally ever stands in the lane
+// the dragon dives through, in any row, so the dive never clips a body.
+const DIVE_KEEPOUT_X_MIN = DIVE_LANE_MIN_X - DIVE_LANE_MARGIN;
+const DIVE_KEEPOUT_X_MAX = DIVE_LANE_MAX_X + DIVE_LANE_MARGIN;
+
 // Individual floating podiums scattered across four staggered rows, so
 // everyone reads as having claimed their own spot rather than standing
-// shoulder to shoulder. Builds one extra slot per row (more candidate
+// shoulder to shoulder. Builds several extra slots per row (more candidate
 // positions than friends) specifically so any slot landing inside the
-// jail keep-out zone can just be dropped instead of needing a friend
-// reassigned by hand -- stays correct even if the roster size changes.
+// jail or dive-lane keep-out zones can just be dropped instead of needing
+// a friend reassigned by hand -- stays correct even if the roster size
+// changes.
 function buildAllyPositions(total) {
-  const perRow = Math.ceil(total / ALLY_ROWS) + 1;
+  const perRow = Math.ceil(total / ALLY_ROWS) + 3;
   const marginX = 60;
   const usableW = W - marginX * 2;
   const spacing = usableW / perRow;
@@ -98,8 +127,9 @@ function buildAllyPositions(total) {
     const stagger = row % 2 === 1 ? spacing / 2 : 0;
     for (let col = 0; col < perRow; col++) {
       const x = Math.min(W - marginX, marginX + stagger + (col + 0.5) * spacing);
-      const inKeepout = y < JAIL_KEEPOUT_Y_MAX && x > JAIL_KEEPOUT_X_MIN && x < JAIL_KEEPOUT_X_MAX;
-      if (inKeepout) continue;
+      const inJailKeepout = y < JAIL_KEEPOUT_Y_MAX && x > JAIL_KEEPOUT_X_MIN && x < JAIL_KEEPOUT_X_MAX;
+      const inDiveKeepout = x > DIVE_KEEPOUT_X_MIN && x < DIVE_KEEPOUT_X_MAX;
+      if (inJailKeepout || inDiveKeepout) continue;
       positions.push({ x, y });
     }
   }
@@ -171,8 +201,9 @@ export default class BossScene extends Phaser.Scene {
     // while vulnerable. Sized a bit generously so a shot lands even if its
     // height doesn't line up pixel-perfect; this used to be a "walk/jump
     // into it" hitbox sized for physical touch, a much stricter target
-    // than a horizontally-fired shot needs.
-    this.weakPoint = this.add.circle(DRAGON_X, DRAGON_HIGH_Y + WEAK_OFFSET_Y, 22, PALETTE.weakSafe, 0.9);
+    // than a horizontally-fired shot needs. Positioned at the dragon's
+    // actual starting spot (not a hardcoded x) now that it patrols.
+    this.weakPoint = this.add.circle(this.dragonGroup.x, this.dragonGroup.y + WEAK_OFFSET_Y, 22, PALETTE.weakSafe, 0.9);
     this.weakPoint.setStrokeStyle(2, 0xffffff, 0.45);
     // Dynamic, not static -- it gets repositioned every frame the dragon
     // swoops, and a static body's bounds are meant for things that don't
@@ -203,10 +234,12 @@ export default class BossScene extends Phaser.Scene {
 
     this.buildJailCell();
     this.buildAllySquad();
+    this.showBossQuotes();
 
     this.callbacks.onHeartsChange(this.hearts);
     this.callbacks.onBossStart(DRAGON_HP);
 
+    this.startPatrolFrom(this.dragonGroup.x);
     this.swoopTimer = this.time.addEvent({ delay: SWOOP_INTERVAL, callback: () => this.swoop(), loop: true });
     this.fireTimer = this.time.addEvent({ delay: FIREBALL_INTERVAL, callback: () => this.spawnFireball(), loop: true });
     this.allyFireTimer = this.time.addEvent({ delay: ALLY_FIRE_INTERVAL, callback: () => this.allyVolley(), loop: true });
@@ -268,14 +301,36 @@ export default class BossScene extends Phaser.Scene {
     this.allies = friends.map((friend, i) => this.buildAlly(friend, positions[i]));
   }
 
+  // A one-line reaction from each rescued friend the moment the dragon
+  // fight opens (they're all already in frame -- this scene never scrolls),
+  // in a thought cloud above their own podium. See src/data/bossQuotes.js
+  // for the actual lines. With 19 of them and the squad standing shoulder
+  // to shoulder, popping all 19 in at once turned into one unreadable wall
+  // of overlapping bubbles -- staggering their start by BOSS_QUOTE_GAP_MS
+  // each keeps only a handful on screen at any moment instead.
+  showBossQuotes() {
+    this.allies.forEach((ally, i) => {
+      const quote = bossQuotes[friends[i].id];
+      if (!quote) return;
+      const headTopY = ally.y - (HERO_SIZE.height * ALLY_SCALE) / 2 - 8;
+      this.time.delayedCall(i * BOSS_QUOTE_GAP_MS, () => {
+        if (this.finished) return;
+        createThoughtCloud(this, ally.x, headTopY, quote);
+      });
+    });
+  }
+
   // Same hero figure + wand the player wears everywhere else in the game
   // (see LevelScene), just smaller and standing still -- reads as "one of
   // her friends, armed, holding position" rather than a different avatar
-  // style invented just for this scene. Faces toward the dragon.
+  // style invented just for this scene. Faces toward the middle of the
+  // arena, where the dragon's dive lane (and the jail) sit -- there's no
+  // single fixed "toward the dragon" anymore now that it patrols the
+  // whole width.
   buildAlly(friend, pos) {
     const { x, y } = pos;
     const color = Phaser.Display.Color.HexStringToColor(friend.color).color;
-    const dir = x < DRAGON_X ? 1 : -1;
+    const dir = x < W / 2 ? 1 : -1;
 
     this.add.ellipse(x, y + 29, 32, 7, 0x000000, 0.28);
     this.add.rectangle(x, y + 25, 28, 6, 0x241542, 0.95).setStrokeStyle(1, 0x140b28, 0.6);
@@ -363,7 +418,7 @@ export default class BossScene extends Phaser.Scene {
   buildDragon() {
     const { dragonBody: body, dragonBelly: belly } = PALETTE;
     const dark = 0x5c1428;
-    const g = this.add.container(DRAGON_X, DRAGON_HIGH_Y);
+    const g = this.add.container(DRAGON_PATROL_MIN_X, DRAGON_HIGH_Y);
 
     const tail = this.add.triangle(-40, 6, 0, 0, -55, -18, -18, -14, dark);
     const wingL = this.add.triangle(-8, -10, 0, 0, -58, -50, 4, -18, dark).setAlpha(0.92);
@@ -401,6 +456,34 @@ export default class BossScene extends Phaser.Scene {
     });
   }
 
+  // Flies it back and forth across DRAGON_PATROL_MIN_X..MAX_X at cruising
+  // altitude, one leg at a time (rather than one long yoyo/repeat tween) so
+  // it can always be interrupted and later resumed from wherever it
+  // actually is -- see swoop()/retractDragon(). A plain yoyo tween paused
+  // mid-flight and resumed later snaps back onto its own original
+  // start/end interpolation instead of continuing from the paused spot,
+  // which looked like the dragon teleporting after every dive.
+  startPatrolFrom(x) {
+    this.patrolDir = x <= (DRAGON_PATROL_MIN_X + DRAGON_PATROL_MAX_X) / 2 ? 1 : -1;
+    this.queueNextPatrolLeg(x);
+  }
+
+  queueNextPatrolLeg(fromX) {
+    const targetX = this.patrolDir === 1 ? DRAGON_PATROL_MAX_X : DRAGON_PATROL_MIN_X;
+    const duration = Math.max(200, Math.abs(targetX - fromX) / DRAGON_PATROL_SPEED);
+    this.dragonPatrolTween = this.tweens.add({
+      targets: this.dragonGroup,
+      x: targetX,
+      duration,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        if (this.finished) return;
+        this.patrolDir *= -1;
+        this.queueNextPatrolLeg(this.dragonGroup.x);
+      },
+    });
+  }
+
   swoop() {
     // Guards against two swoop cycles ever animating at once -- the down
     // tween, the exposed window, and the up tween overlap the weak point's
@@ -410,12 +493,19 @@ export default class BossScene extends Phaser.Scene {
     this.isSwooping = true;
     this.vulnerable = true;
     this.weakPoint.fillColor = PALETTE.weakHot;
+    // Stop patrolling and dive through the reserved dive lane (see
+    // DIVE_LANE_MIN_X/MAX_X and the matching ally position keep-out) --
+    // clamped toward wherever she's actually standing so the fight stays
+    // reachable, but never at an x any ally occupies, so the dive down to
+    // DRAGON_LOW_Y can't clip through the squad on the way.
+    if (this.dragonPatrolTween) this.dragonPatrolTween.remove();
+    const targetX = Phaser.Math.Clamp(this.player.x, DIVE_LANE_MIN_X, DIVE_LANE_MAX_X);
     this.tweens.add({
       targets: this.dragonGroup,
-      y: `+=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
+      x: targetX,
+      y: DRAGON_LOW_Y,
       duration: SWOOP_MOVE_DURATION,
       ease: 'Sine.easeOut',
-      onUpdate: () => this.syncWeakPoint(),
       onComplete: () => {
         // Landing an early hit (see tryHitDragon) retracts the dragon
         // itself and cancels this timer -- if it didn't, this would fire
@@ -431,20 +521,21 @@ export default class BossScene extends Phaser.Scene {
   }
 
   // Brings the dragon back up to its high position, ending the vulnerable
-  // window. Called either when the window times out unhit (see swoop) or
-  // immediately when a hit lands (see tryHitDragon) -- exactly one of those
-  // two paths runs per swoop, never both.
+  // window, then hands it back to startPatrolFrom() to resume cruising from
+  // wherever it ended up. Called either when the window times out unhit
+  // (see swoop) or immediately when a hit lands (see tryHitDragon) --
+  // exactly one of those two paths runs per swoop, never both.
   retractDragon() {
     this.vulnerable = false;
     this.weakPoint.fillColor = PALETTE.weakSafe;
     this.tweens.add({
       targets: this.dragonGroup,
-      y: `-=${DRAGON_LOW_Y - DRAGON_HIGH_Y}`,
+      y: DRAGON_HIGH_Y,
       duration: SWOOP_MOVE_DURATION,
       ease: 'Sine.easeIn',
-      onUpdate: () => this.syncWeakPoint(),
       onComplete: () => {
         this.isSwooping = false;
+        if (!this.finished) this.queueNextPatrolLeg(this.dragonGroup.x);
       },
     });
   }
@@ -558,6 +649,7 @@ export default class BossScene extends Phaser.Scene {
     this.swoopTimer.remove();
     this.fireTimer.remove();
     this.allyFireTimer.remove();
+    if (this.dragonPatrolTween) this.dragonPatrolTween.remove();
     this.fireballs.clear(true, true);
     this.openJailCell();
     this.tweens.add({
@@ -606,6 +698,21 @@ export default class BossScene extends Phaser.Scene {
     }
     if (this.playerFace) {
       this.playerFace.setPosition(player.x, player.y + this.playerFaceOffsetY * player.scaleY);
+    }
+
+    // The weak point used to only need repositioning during a swoop's own
+    // tween (dragonGroup.y moving); now dragonGroup.x also drifts every
+    // frame from the horizontal patrol, so it has to track continuously
+    // rather than just during a swoop.
+    this.syncWeakPoint();
+
+    // Face whichever way it's actually moving -- patrol and the swoop dive
+    // both just move dragonGroup.x directly, so a plain frame-to-frame
+    // delta covers both instead of needing separate facing logic for each.
+    if (this.dragonGroup) {
+      const dx = this.dragonGroup.x - (this.lastDragonX ?? this.dragonGroup.x);
+      if (Math.abs(dx) > 0.05) this.dragonGroup.setScale(dx < 0 ? -1 : 1, 1);
+      this.lastDragonX = this.dragonGroup.x;
     }
   }
 }
