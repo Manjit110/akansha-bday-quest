@@ -114,8 +114,8 @@ export default class LevelScene extends Phaser.Scene {
     this.createFortGate(cfg);
 
     // --- player: wears this level's friend's face while you play their level ---
-    ensureHeroTexture(this);
-    this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, 'hero-idle');
+    this.heroBaseKey = ensureHeroTexture(this, this.friend.gender);
+    this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, `${this.heroBaseKey}-idle`);
     this.player.body.setSize(22, 46).setOffset(7, 20);
     this.player.body.setBounce(0);
     this.player.body.setMaxVelocity(260, 900);
@@ -573,7 +573,7 @@ export default class LevelScene extends Phaser.Scene {
 
     const onGround = player.body.blocked.down || player.body.touching.down;
 
-    animateHumanoid(player, { onGround, time, baseKey: 'hero' });
+    animateHumanoid(player, { onGround, time, baseKey: this.heroBaseKey });
     if (this.wand) {
       const dir = player.flipX ? -1 : 1;
       this.wand.setPosition(player.x + dir * 14, player.y + 12);

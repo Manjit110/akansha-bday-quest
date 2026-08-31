@@ -2,12 +2,18 @@
 // optionally a party hat) onto the scene's texture manager, with a simple
 // 2-frame walk cycle, so the player/enemies read as little people rather
 // than flat boxes. Pure Graphics-drawn, no image assets needed.
-
-// topMargin is extra headroom above the head circle -- small for characters
-// with no hat, larger for hat-wearing ones so the hat has room to sit above
-// the head instead of getting clipped by the texture edge.
+//
+// The hero figure comes in two builds -- a broad-shouldered commando taper
+// for 'male' and a fitted hourglass taper with a ponytail for 'female'
+// (see drawTorso/drawHair below), closer to an 8-bit run-and-gun hero than
+// the old one-size-fits-all blob. Regular enemies (ensureImpTexture) don't
+// pass a gender and keep the plain original silhouette -- they're monsters,
+// not friends, so there's nothing to differentiate.
 export const HERO_SIZE = { width: 36, height: 68, topMargin: 16 };
 export const IMP_SIZE = { width: 30, height: 42, topMargin: 2 };
+
+const BOOT_COLOR = 0x2b2320;
+const HAIR_COLOR = 0x3a2416;
 
 // Matches the head circle drawFigure() draws, so a photo overlay can be
 // positioned/sized to sit exactly on top of it.
@@ -30,7 +36,69 @@ function drawPartyHat(g, cx, headCy, headR) {
   g.fillCircle(apexX, apexY, headR * 0.22);
 }
 
-function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat }) {
+// Broad, square shoulders tapering to a narrower waist for 'male' (the
+// classic run-and-gun commando V-shape); a fitted top tapering in at the
+// waist then back out at the hip for 'female'. Anything else (regular
+// enemies) keeps the original plain rounded block.
+function drawTorso(g, { cx, torsoTop, torsoH, torsoW, color, gender }) {
+  g.fillStyle(color, 1);
+  if (gender === 'male') {
+    const shoulderW = torsoW * 1.3;
+    const waistW = torsoW * 0.82;
+    g.fillPoints(
+      [
+        { x: cx - shoulderW / 2, y: torsoTop },
+        { x: cx + shoulderW / 2, y: torsoTop },
+        { x: cx + waistW / 2, y: torsoTop + torsoH },
+        { x: cx - waistW / 2, y: torsoTop + torsoH },
+      ],
+      true
+    );
+  } else if (gender === 'female') {
+    const shoulderW = torsoW * 0.95;
+    const waistW = torsoW * 0.6;
+    const hipW = torsoW * 0.88;
+    const waistY = torsoTop + torsoH * 0.55;
+    g.fillPoints(
+      [
+        { x: cx - shoulderW / 2, y: torsoTop },
+        { x: cx + shoulderW / 2, y: torsoTop },
+        { x: cx + waistW / 2, y: waistY },
+        { x: cx + hipW / 2, y: torsoTop + torsoH },
+        { x: cx - hipW / 2, y: torsoTop + torsoH },
+        { x: cx - waistW / 2, y: waistY },
+      ],
+      true
+    );
+  } else {
+    g.fillRoundedRect(cx - torsoW / 2, torsoTop, torsoW, torsoH, torsoW * 0.3);
+  }
+}
+
+// A ponytail, drawn before the head circle so the head paints over its
+// base and it only reads as trailing out from behind -- the one gendered
+// detail that survives even the oversized face-photo overlay, since it
+// sits outside the head's own circle radius. Swings a little with her
+// stride via the same `swing` the limbs use.
+function drawHair(g, { cx, headCy, headR, swing }) {
+  // Only the "root" corner sits inside the head circle's radius (tucked
+  // under it, so the head paints over just that corner) -- the other three
+  // corners land outside it, so most of this shape survives and actually
+  // reads as hair swooping out from behind the head rather than getting
+  // swallowed entirely.
+  g.fillStyle(HAIR_COLOR, 1);
+  g.fillPoints(
+    [
+      { x: cx + headR * 0.7, y: headCy - headR * 0.6 }, // root, near the crown
+      { x: cx + headR * 1.4, y: headCy + headR * 0.1 }, // outer bulge
+      { x: cx + headR * 0.9 + swing * 0.4, y: headCy + headR * 2.3 }, // tip, past the shoulder
+      { x: cx + headR * 0.35, y: headCy + headR * 0.35 }, // inner tuck, under the head
+    ],
+    true
+  );
+}
+
+function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat, gender }) {
   const { width: w, height: h, topMargin } = size;
   const cx = w / 2;
   const headR = w * 0.3;
@@ -39,29 +107,46 @@ function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat
   const torsoH = h * 0.32;
   const torsoW = w * 0.5;
   const torsoBottom = torsoTop + torsoH;
-  const armW = w * 0.2;
+  // Male reads bulkier through the arms (a small deltoid bump added below);
+  // female stays leaner. Legs mirror the same difference, a touch slimmer
+  // for female, and both get a dark boot cap instead of the old flat
+  // single-color leg.
+  const armW = w * (gender === 'male' ? 0.24 : gender === 'female' ? 0.17 : 0.2);
   const armH = h * 0.27;
-  const legW = w * 0.24;
+  const legW = w * (gender === 'male' ? 0.25 : gender === 'female' ? 0.2 : 0.24);
   const legH = h - torsoBottom - 2;
+  const bootH = Math.max(3, legH * 0.22);
 
   // step swings limbs in opposite pairs: -1 / 0 / 1
   const swing = step * (h * 0.05);
 
+  const drawLeg = (lx, ly) => {
+    g.fillStyle(legColor, 1);
+    g.fillRoundedRect(lx, ly, legW, legH, legW / 2);
+    g.fillStyle(BOOT_COLOR, 1);
+    g.fillRoundedRect(lx, ly + legH - bootH, legW, bootH, legW * 0.35);
+  };
+
+  const drawArm = (ax, ay) => {
+    g.fillStyle(armColor, 1);
+    g.fillRoundedRect(ax, ay, armW, armH, armW / 2);
+    if (gender === 'male') {
+      g.fillCircle(ax + armW / 2, ay + armW * 0.4, armW * 0.62);
+    }
+  };
+
   // back arm + leg first so the front pair overlaps them
-  g.fillStyle(armColor, 1);
-  g.fillRoundedRect(cx + torsoW / 2 - armW * 0.35, torsoTop + 2 - swing, armW, armH, armW / 2);
-  g.fillStyle(legColor, 1);
-  g.fillRoundedRect(cx + torsoW * 0.16, torsoBottom - 2 + swing, legW, legH, legW / 2);
+  drawArm(cx + torsoW / 2 - armW * 0.35, torsoTop + 2 - swing);
+  drawLeg(cx + torsoW * 0.16, torsoBottom - 2 + swing);
 
   // torso
-  g.fillStyle(torso, 1);
-  g.fillRoundedRect(cx - torsoW / 2, torsoTop, torsoW, torsoH, torsoW * 0.3);
+  drawTorso(g, { cx, torsoTop, torsoH, torsoW, color: torso, gender });
 
   // front leg + arm
-  g.fillStyle(legColor, 1);
-  g.fillRoundedRect(cx - torsoW * 0.16 - legW, torsoBottom - 2 - swing, legW, legH, legW / 2);
-  g.fillStyle(armColor, 1);
-  g.fillRoundedRect(cx - torsoW / 2 - armW * 0.65, torsoTop + 2 + swing, armW, armH, armW / 2);
+  drawLeg(cx - torsoW * 0.16 - legW, torsoBottom - 2 - swing);
+  drawArm(cx - torsoW / 2 - armW * 0.65, torsoTop + 2 + swing);
+
+  if (gender === 'female') drawHair(g, { cx, headCy, headR, swing });
 
   // head
   g.fillStyle(skin, 1);
@@ -93,15 +178,22 @@ function buildWalkFrames(scene, baseKey, size, colors) {
   });
 }
 
-export function ensureHeroTexture(scene, baseKey = 'hero') {
+// gender: 'male' | 'female'. Returns the base texture key
+// (`hero-male`/`hero-female`) to use for both the sprite's initial texture
+// and animateHumanoid()'s baseKey -- callers need it back since it now
+// varies per friend instead of always being a fixed 'hero'.
+export function ensureHeroTexture(scene, gender = 'male') {
+  const baseKey = `hero-${gender}`;
   buildWalkFrames(scene, baseKey, HERO_SIZE, {
     skin: 0xffd9a0,
-    torso: 0xffb703,
+    torso: gender === 'female' ? 0xff8fab : 0x606c38,
     armColor: 0xffd9a0,
-    legColor: 0x3a86ff,
+    legColor: gender === 'female' ? 0x4a4e69 : 0x3a4a2b,
     angry: false,
     hat: true,
+    gender,
   });
+  return baseKey;
 }
 
 export function ensureImpTexture(scene, baseKey = 'imp') {
@@ -113,6 +205,7 @@ export function ensureImpTexture(scene, baseKey = 'imp') {
     angry: true,
     hat: false,
   });
+  return baseKey;
 }
 
 // Call each frame to keep a physics sprite feeling alive: faces its

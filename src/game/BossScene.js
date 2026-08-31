@@ -178,8 +178,8 @@ export default class BossScene extends Phaser.Scene {
     this.add.rectangle(W / 2, GROUND_Y, W, 8, PALETTE.groundTop);
     this.physics.add.existing(ground, true);
 
-    ensureHeroTexture(this);
-    this.player = this.physics.add.sprite(120, GROUND_Y - 100, 'hero-idle');
+    this.heroBaseKey = ensureHeroTexture(this, playerConfig.gender);
+    this.player = this.physics.add.sprite(120, GROUND_Y - 100, `${this.heroBaseKey}-idle`);
     this.player.body.setSize(22, 46).setOffset(7, 20);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
@@ -310,7 +310,8 @@ export default class BossScene extends Phaser.Scene {
     this.add.ellipse(x, y + 29, 32, 7, 0x000000, 0.28);
     this.add.rectangle(x, y + 25, 28, 6, 0x241542, 0.95).setStrokeStyle(1, 0x140b28, 0.6);
 
-    const sprite = this.add.sprite(x, y, 'hero-idle');
+    const allyBaseKey = ensureHeroTexture(this, friend.gender);
+    const sprite = this.add.sprite(x, y, `${allyBaseKey}-idle`);
     sprite.setScale(ALLY_SCALE);
     sprite.setFlipX(dir === -1);
 
@@ -665,7 +666,7 @@ export default class BossScene extends Phaser.Scene {
     }
     this.shootRequested = false;
 
-    animateHumanoid(player, { onGround, time, baseKey: 'hero' });
+    animateHumanoid(player, { onGround, time, baseKey: this.heroBaseKey });
     if (this.wand) {
       const dir = player.flipX ? -1 : 1;
       this.wand.setPosition(player.x + dir * 14, player.y + 12);

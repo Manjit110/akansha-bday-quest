@@ -4,4 +4,5 @@
 export const player = {
   name: 'Akansha',
   facePhoto: null,
+  gender: 'female',
 };
