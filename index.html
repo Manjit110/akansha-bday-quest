@@ -11,6 +11,19 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
+
+  <!-- Shown instead of everything else on phones/tablets -- this is a
+       keyboard-driven platformer with no touch controls for movement, so
+       playing on a touch device would just be broken rather than merely
+       cramped. See the isMobileOrTablet() check in main.js. -->
+  <div id="device-block" class="device-block">
+    <div class="stars"></div>
+    <div class="device-block-icon">🖥️</div>
+    <h1 class="pixel-title small">A Quest for<br />Akansha</h1>
+    <p class="device-block-message">This little adventure needs a real keyboard to run, jump, and fight with.</p>
+    <p class="device-block-sub">Please open this link on a <strong>laptop or desktop computer</strong> instead 💛</p>
+  </div>
+
   <div id="app">
 
     <!-- TITLE SCREEN -->

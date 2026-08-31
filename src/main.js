@@ -12,6 +12,27 @@ const LAST_NAME_KEY = 'akansha-quest-player-name';
 const UNLOCK_CODE = 'akansha';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];
 
+// Movement is keyboard-only (arrow keys/WASD) with no on-screen d-pad, so a
+// phone or tablet can't actually play this -- only the shoot button has a
+// touch affordance. Rather than let her discover that mid-level, block the
+// whole thing up front with #device-block (see index.html/style.css) and
+// never touch the rest of this file's setup.
+//
+// iPadOS 13+ deliberately reports a desktop Safari/Mac user agent (Apple's
+// "Request Desktop Website" default), so a plain UA check alone misses
+// every modern iPad -- maxTouchPoints is the standard workaround, since a
+// real Mac never reports touch points.
+function isMobileOrTablet() {
+  const ua = navigator.userAgent || navigator.vendor || '';
+  const looksLikePhoneOrAndroidTablet = /Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+  const looksLikeIPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return looksLikePhoneOrAndroidTablet || looksLikeIPad;
+}
+
+if (isMobileOrTablet()) {
+  document.getElementById('device-block').classList.add('visible');
+}
+
 // Canvas text (used throughout the Phaser scenes) doesn't wait for webfonts
 // on its own -- it just silently falls back if the font isn't ready yet.
 // Trigger the fetch now, as early as possible, so Caveat is loaded well

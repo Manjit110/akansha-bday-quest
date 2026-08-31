@@ -481,3 +481,55 @@ html, body {
 @media (max-width: 480px) {
   .map-node { width: 52px; height: 52px; font-size: 18px; }
 }
+
+/* --- phone/tablet block screen --- */
+.device-block {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 24px;
+  text-align: center;
+  background: radial-gradient(ellipse at top, var(--bg-mid), var(--bg-deep) 70%);
+}
+.device-block.visible { display: flex; }
+
+.device-block-icon {
+  font-size: 56px;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 0 18px rgba(255, 209, 102, 0.5));
+  animation: device-block-float 3.2s ease-in-out infinite;
+}
+@keyframes device-block-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.device-block-message {
+  max-width: 380px;
+  margin: 10px 0 0;
+  color: var(--text-light);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.device-block-sub {
+  max-width: 380px;
+  margin: 14px 0 0;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 209, 102, 0.35);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.device-block-sub strong {
+  color: var(--accent-gold);
+}
