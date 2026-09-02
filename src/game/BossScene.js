@@ -60,7 +60,7 @@ const JAIL_H = 96;
 const ALLY_SCALE = 0.85;
 // The drawn head is tiny at ALLY_SCALE; enlarge the photo well past it so
 // a face is actually legible, same trick LevelScene uses for the player.
-const ALLY_FACE_SCALE = 2.3;
+const ALLY_FACE_SCALE = 2.8;
 const ALLY_ROWS = 4;
 const ALLY_ROW_Y_START = 280;
 const ALLY_ROW_Y_STEP = 42;
