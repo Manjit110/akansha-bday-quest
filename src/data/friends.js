@@ -22,8 +22,8 @@ export const friends = [
   mkFriend(6, 'Bhumi', '#8ecae6', 'female', '/friends/bhumi-face.jpg'),
   mkFriend(7, 'Mahak', '#f4a261', 'female', '/friends/mahak-face.jpg'),
   mkFriend(8, 'Abhishek Loblaws', '#b5e48c', 'male', '/friends/abhishek-loblaws-face.jpg'),
-  mkFriend(9, 'Rashika', '#ffafcc', 'female'),
-  mkFriend(10, 'Adi', '#a0c4ff', 'male'), // guessed -- unisex short name, double-check
+  mkFriend(9, 'Rashika', '#ffafcc', 'female', '/friends/rashika-face.jpg'),
+  mkFriend(10, 'Adi', '#a0c4ff', 'male', '/friends/adi-face.jpg'), // guessed -- unisex short name, double-check
   mkFriend(14, 'Sara', '#9bf6ff', 'female', '/friends/sara-face.jpg'),
   mkFriend(15, 'Manish', '#bdb2ff', 'male', '/friends/manish-face.jpg'),
   mkFriend(18, 'Gurseerut', '#72efdd', 'female', '/friends/gurseerut-face.jpg'), // guessed -- unisex Punjabi name, double-check
