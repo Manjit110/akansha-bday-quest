@@ -20,6 +20,34 @@ const TOTAL_LEVELS = friends.length;
 const MAX_JUMP_HEIGHT = 112; // vy=560, gravity=1400 -> vy^2/(2g)
 const SAFE_MAX_HORIZONTAL = 140; // conservative single-jump horizontal reach
 
+// Finds an x to stand on and shoot the mini-boss from, verified against
+// the level's *real* generated geometry instead of guessing a fixed
+// offset from the guard. Two fixed offsets were tried and each broke on
+// a real level: boss.x-70 (clear of the guard's ~49px hitbox radius)
+// landed inside a genuine gap on level 4, whose procedurally-generated
+// groundSegments contains a broken negative-width entry (LevelScene's
+// `if (seg.width <= 0) return` silently drops it instead of building a
+// collider there); boss.x+60 (the flag side instead) is clear of the
+// hitbox but sits inside the flag/fort trigger zone's edge on level 1 --
+// there's only ~31px of real clearance between the guard's hitbox and
+// that zone by design (the guard always spawns 110px before the flag),
+// so `enterFort()` fired mid-fight, before this test's own later,
+// deliberate walk to the flag, and its re-entry guard then made that
+// walk a no-op. Scanning leftward from just outside the hitbox for an x
+// that's solidly inside a real (positive-width) ground segment, with
+// margin, sidesteps both failure modes on any level's layout.
+function pickSafeStandoffX(levelIndex) {
+  const cfg = generateLevel(levelIndex, TOTAL_LEVELS);
+  const guardX = cfg.flagX - 110;
+  const CLEAR = 60;
+  const MARGIN = 20;
+  for (let x = guardX - CLEAR; x > guardX - CLEAR - 500; x -= 10) {
+    const seg = cfg.groundSegments.find((s) => s.width > 0 && x - MARGIN >= s.x && x + MARGIN <= s.x + s.width);
+    if (seg) return x;
+  }
+  return guardX - CLEAR; // every level has open ground well before the guard in practice
+}
+
 let failures = 0;
 const fail = (msg) => {
   failures++;
@@ -185,31 +213,44 @@ async function checkLevelTransition(page) {
   await page.waitForTimeout(500);
 
   // Defeat level 1's mini-boss for real.
-  await page.evaluate(() => {
+  const standoffX1 = pickSafeStandoffX(0);
+  await page.evaluate((x) => {
     const scene = window.__testGame.scene.getScene('LevelScene');
-    const boss = scene.bossGuardian;
-    // Close to her actual standing height, not the ~100px drop this used
-    // before -- the mini-boss's portrait hitbox is taller than the old
-    // procedural animal sprites were, and a longer fall could pass close
-    // enough to it mid-transit to register as an accidental stomp (see
-    // handleEnemyHit's velocity.y>0 check), bouncing her away before she
-    // gets a real shot off. Confirmed this exact flake happening on a real
-    // run, not just in theory.
-    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 40);
+    // A full ~100px drop from above (not a shortcut spawn already at
+    // standing height) matters too: PLAYER_BODY's offset had to grow
+    // along with HERO_SIZE (see LevelScene's own setOffset comment) to
+    // keep the hitbox anchored to her feet, and the old groundY-40
+    // shortcut now spawns her body already ~26px inside the ground,
+    // which Arcade Physics can fail to separate cleanly on a segment
+    // seam (confirmed by tracing body.touching.down/velocity.y frame by
+    // frame: she fell straight through, never once registering a
+    // collision). A real drop from above resolves normally regardless of
+    // the seam, the same way her actual level-start spawn always has.
+    scene.player.setPosition(x, scene.cfg.groundY - 100);
     scene.player.setFlipX(false);
-  });
+  }, standoffX1);
   await page.waitForTimeout(400);
   await page.evaluate(() => {
     return new Promise((resolve) => {
       const scene = window.__testGame.scene.getScene('LevelScene');
       const boss = scene.bossGuardian;
+      // Fixed at the spot she was actually placed on solid ground above,
+      // not re-derived from the guard's own (patrolling) x every shot --
+      // the guard walks back and forth in front of a jump-required gap, so
+      // chasing its live x drifted her off the edge of that gap mid-fight,
+      // she fell in, and repeated fall damage burned through her hearts
+      // and force-restarted the level (resetting the guard back to full
+      // HP) before 8 shots ever landed. Confirmed by instrumenting a real
+      // run: player.y climbed from ~400 to 700+ across exactly this loop.
+      const shootX = scene.player.x;
       let shots = 0;
       function tryShoot() {
-        if (!boss.active || shots >= 6) {
+        if (!boss.active || shots >= 8) {
+          // BOSS_HP is 5 -- a few spare attempts beyond that
           resolve();
           return;
         }
-        scene.player.setPosition(boss.x - 40, scene.player.y);
+        scene.player.setPosition(shootX, scene.player.y);
         scene.shoot();
         shots++;
         setTimeout(tryShoot, 500);
@@ -230,13 +271,20 @@ async function checkLevelTransition(page) {
     scene.player.setPosition(scene.flag.x + 35, scene.flag.y);
   });
 
+  // Bounded, not an unconditional poll -- if the mini-boss was never
+  // actually defeated above, enteringFort never becomes true and this used
+  // to spin forever (30ms forever), silently burning CPU with no result
+  // instead of failing the check.
   const stopPos = await page.evaluate(
     () =>
       new Promise((resolve) => {
         const scene = window.__testGame.scene.getScene('LevelScene');
+        const deadline = Date.now() + 8000;
         const check = () => {
           if (scene.player.body && scene.player.body.velocity.x === 0 && scene.enteringFort) {
             resolve({ x: scene.player.x, gateX: scene.cfg.flagX });
+          } else if (Date.now() > deadline) {
+            resolve({ timedOut: true, miniBossDefeated: scene.miniBossDefeated });
           } else {
             setTimeout(check, 30);
           }
@@ -244,6 +292,10 @@ async function checkLevelTransition(page) {
         check();
       })
   );
+  if (stopPos.timedOut) {
+    fail(`level 1: never entered the fort (miniBossDefeated=${stopPos.miniBossDefeated}) -- gave up after 8s instead of hanging`);
+    return;
+  }
   const offCenter = Math.abs(stopPos.x - stopPos.gateX);
   if (offCenter > 4) {
     fail(`level 1: fort entry stopped ${offCenter.toFixed(0)}px off the gate's center (x=${stopPos.x.toFixed(0)}, gate=${stopPos.gateX}) -- likely standing in the pillar instead of the doorway`);
@@ -505,26 +557,31 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
   await page.click('.map-node.current');
   await page.waitForSelector('#game-container canvas');
   await page.waitForTimeout(500);
-  await page.evaluate(() => {
+  // See checkLevelTransition's comment on pickSafeStandoffX for why a
+  // fixed offset from the guard isn't reliable across levels.
+  await page.evaluate((x) => {
     const scene = window.__testGame.scene.getScene('LevelScene');
-    const boss = scene.bossGuardian;
-    // Short drop, not a long fall -- see checkLevelTransition's comment.
-    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 40);
+    scene.player.setPosition(x, scene.cfg.groundY - 100);
     scene.player.setFlipX(false);
-  });
+  }, pickSafeStandoffX(0));
   await page.waitForTimeout(400);
   await page.evaluate(
     () =>
       new Promise((resolve) => {
         const scene = window.__testGame.scene.getScene('LevelScene');
         const boss = scene.bossGuardian;
+        // Fixed, not re-derived from the guard's own patrolling x each shot
+        // -- see checkLevelTransition's comment for why that drifts her
+        // into a gap.
+        const shootX = scene.player.x;
         let shots = 0;
         function tryShoot() {
-          if (!boss.active || shots >= 6) {
+          if (!boss.active || shots >= 8) {
+            // BOSS_HP is 5 -- a few spare attempts beyond that
             resolve();
             return;
           }
-          scene.player.setPosition(boss.x - 40, scene.player.y);
+          scene.player.setPosition(shootX, scene.player.y);
           scene.shoot();
           shots++;
           setTimeout(tryShoot, 400);
@@ -814,28 +871,32 @@ async function checkBossFightsAndCompletion(page) {
 
     // let the player settle to real standing height before firing --
     // firing mid-teleport (before gravity settles) previously masked a
-    // real bug where the shot's spawn height missed the boss entirely
-    await page.evaluate(() => {
+    // real bug where the shot's spawn height missed the boss entirely.
+    // See checkLevelTransition's comment on pickSafeStandoffX for why a
+    // fixed offset from the guard isn't reliable across levels.
+    await page.evaluate((x) => {
       const scene = window.__testGame.scene.getScene('LevelScene');
-      const boss = scene.bossGuardian;
-      // Short drop, not a long fall -- see checkLevelTransition's comment.
-    scene.player.setPosition(boss.x - 40, scene.cfg.groundY - 40);
+      scene.player.setPosition(x, scene.cfg.groundY - 100);
       scene.player.setFlipX(false);
-    });
+    }, pickSafeStandoffX(levelIndex));
     await page.waitForTimeout(400);
 
     const result = await page.evaluate(() => {
       return new Promise((resolve) => {
         const scene = window.__testGame.scene.getScene('LevelScene');
         const boss = scene.bossGuardian;
+        // Fixed, not re-derived from the guard's own patrolling x each shot
+        // -- see checkLevelTransition's comment for why that drifts her
+        // into a gap.
+        const shootX = scene.player.x;
         let shots = 0;
-        const maxShots = 6;
+        const maxShots = 8; // BOSS_HP is 5 -- a few spare attempts beyond that
         function tryShoot() {
           if (!boss.active || shots >= maxShots) {
             resolve({ defeated: scene.miniBossDefeated, shotsUsed: shots });
             return;
           }
-          scene.player.setPosition(boss.x - 40, scene.player.y);
+          scene.player.setPosition(shootX, scene.player.y);
           scene.shoot();
           shots++;
           setTimeout(tryShoot, 500);

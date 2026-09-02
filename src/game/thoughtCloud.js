@@ -8,7 +8,7 @@ import Phaser from 'phaser';
 const WRAP_WIDTH = 190;
 const PADDING_X = 14;
 const PADDING_Y = 11;
-const HOLD_MS = 6000;
+const HOLD_MS = 9000;
 const FADE_MS = 350;
 const TRAIL_COUNT = 3;
 const GAP_ABOVE_HEAD = 20;

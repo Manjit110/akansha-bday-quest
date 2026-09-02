@@ -1,16 +1,23 @@
-// Draws small humanoid placeholder sprites (head + torso + arms + legs,
-// optionally a party hat) onto the scene's texture manager, with a simple
-// 2-frame walk cycle, so the player/enemies read as little people rather
-// than flat boxes. Pure Graphics-drawn, no image assets needed.
+// Draws the small humanoid hero placeholder sprite (head + torso + arms +
+// legs, optionally a party hat) onto the scene's texture manager, with a
+// walk cycle, so the player/allies read as little people rather than flat
+// boxes. Pure Graphics-drawn, no image assets needed. Regular patrol
+// enemies are drawn separately (see critters.js) -- they're monsters, not
+// people, so they don't share this figure.
 //
 // The hero figure comes in two builds -- a broad-shouldered commando taper
 // for 'male' and a fitted hourglass taper with a ponytail for 'female'
 // (see drawTorso/drawHair below), closer to an 8-bit run-and-gun hero than
-// the old one-size-fits-all blob. Regular enemies (ensureImpTexture) don't
-// pass a gender and keep the plain original silhouette -- they're monsters,
-// not friends, so there's nothing to differentiate.
-export const HERO_SIZE = { width: 36, height: 68, topMargin: 16 };
-export const IMP_SIZE = { width: 30, height: 42, topMargin: 2 };
+// the old one-size-fits-all blob.
+// Doubled from the original {36, 68, 16} so the hero reads twice as big
+// on screen -- every proportion inside drawFigure()/headGeometry() is
+// derived from these as fractions of w/h, so doubling all three here scales
+// the whole drawn figure (and the face overlay, which sizes itself off
+// headGeometry) uniformly and keeps it crisp (baked at the larger size, not
+// stretched). Callers that place a physics body around this sprite
+// (LevelScene, BossScene) size their body/offset to match -- see their own
+// comments.
+export const HERO_SIZE = { width: 72, height: 136, topMargin: 32 };
 
 const BOOT_COLOR = 0x2b2320;
 const HAIR_COLOR = 0x3a2416;
@@ -149,7 +156,7 @@ const PUMP_ANGLE = 0.55;
 // that doesn't depend on the animation frame at all.
 const GUN_ARM_ANGLE = 0.55;
 
-function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat, gender }) {
+function drawFigure(g, size, { skin, torso, armColor, legColor, step, hat, gender }) {
   const { width: w, height: h, topMargin } = size;
   const cx = w / 2;
   const headR = w * 0.3;
@@ -209,14 +216,8 @@ function drawFigure(g, size, { skin, torso, armColor, legColor, step, angry, hat
   g.fillCircle(cx, headCy, headR);
 
   g.fillStyle(0x2b1140, 1);
-  if (angry) {
-    g.lineStyle(Math.max(1.5, w * 0.05), 0x2b1140, 1);
-    g.lineBetween(cx - headR * 0.5, headCy - headR * 0.15, cx - headR * 0.15, headCy + headR * 0.05);
-    g.lineBetween(cx + headR * 0.5, headCy - headR * 0.15, cx + headR * 0.15, headCy + headR * 0.05);
-  } else {
-    g.fillCircle(cx - headR * 0.35, headCy - headR * 0.05, Math.max(1.2, w * 0.045));
-    g.fillCircle(cx + headR * 0.35, headCy - headR * 0.05, Math.max(1.2, w * 0.045));
-  }
+  g.fillCircle(cx - headR * 0.35, headCy - headR * 0.05, Math.max(1.2, w * 0.045));
+  g.fillCircle(cx + headR * 0.35, headCy - headR * 0.05, Math.max(1.2, w * 0.045));
 
   if (hat) drawPartyHat(g, cx, headCy, headR);
 
@@ -256,21 +257,8 @@ export function ensureHeroTexture(scene, gender = 'male') {
     torso: gender === 'female' ? 0xff8fab : 0x606c38,
     armColor: 0xffd9a0,
     legColor: gender === 'female' ? 0x4a4e69 : 0x4a3c2a,
-    angry: false,
     hat: true,
     gender,
-  });
-  return baseKey;
-}
-
-export function ensureImpTexture(scene, baseKey = 'imp') {
-  buildWalkFrames(scene, baseKey, IMP_SIZE, {
-    skin: 0xff8f8f,
-    torso: 0xff6b6b,
-    armColor: 0xff8f8f,
-    legColor: 0x9d0208,
-    angry: true,
-    hat: false,
   });
   return baseKey;
 }
@@ -281,6 +269,26 @@ export function ensureImpTexture(scene, baseKey = 'imp') {
 export function animateHumanoid(sprite, { onGround, time, baseKey }) {
   const vx = sprite.body.velocity.x;
   const vy = sprite.body.velocity.y;
+
+  // Arcade Physics keeps a dynamic body's size/offset scaled to the
+  // sprite's own scale every frame, so the squash/stretch below (an
+  // intentionally cosmetic effect) was also dragging the *collision box*
+  // around by up to offsetY*0.08 -- ~1.6px at the original HERO_SIZE,
+  // unnoticeable, but ~7px once HERO_SIZE doubled. That's enough to lift
+  // her hitbox clear of the ground for a frame, most reliably right after
+  // any teleport (respawnPlayer, or a test harness's setPosition) where
+  // onGround briefly reads stale, and once clear she'd start a real
+  // freefall that never resolved back to grounded -- confirmed by tracing
+  // body.touching.down/velocity.y frame by frame. Caching the true,
+  // scale-independent box here once and re-asserting it every frame below
+  // keeps the visual squash/stretch identical while pinning the hitbox in
+  // world space regardless of scale.
+  if (sprite._baseBodyW === undefined) {
+    sprite._baseBodyW = sprite.body.width;
+    sprite._baseBodyH = sprite.body.height;
+    sprite._baseOffsetX = sprite.body.offset.x;
+    sprite._baseOffsetY = sprite.body.offset.y;
+  }
 
   if (vx < -5) sprite.setFlipX(true);
   else if (vx > 5) sprite.setFlipX(false);
@@ -297,4 +305,8 @@ export function animateHumanoid(sprite, { onGround, time, baseKey }) {
     sprite.setScale(1, 1);
     sprite.setTexture(`${baseKey}-idle`);
   }
+
+  sprite.body
+    .setSize(sprite._baseBodyW / sprite.scaleX, sprite._baseBodyH / sprite.scaleY)
+    .setOffset(sprite._baseOffsetX / sprite.scaleX, sprite._baseOffsetY / sprite.scaleY);
 }

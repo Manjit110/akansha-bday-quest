@@ -30,24 +30,20 @@ export const DRAGON_HP = 10;
 const HITS_PER_STAGE_MIN = 4;
 const HITS_PER_STAGE_MAX = 5;
 // The dragon patrols this whole band horizontally (see startPatrolFrom())
-// instead of hovering in one spot -- DRAGON_HIGH_Y sits below the jail cell
-// (JAIL_Y=84, bottom ~132) so it flies past the cage rather than through
-// it, and ALLY_ROW_Y_START (below) keeps the whole rescued squad clear of
-// its body while it's cruising.
+// at one fixed altitude -- it never dives or changes height, only ever
+// moving left/right along this single line -- DRAGON_HIGH_Y sits below the
+// jail cell (JAIL_Y=84, bottom ~132) so it flies past the cage rather than
+// through it, and ALLY_ROW_Y_START (below) keeps the whole rescued squad
+// clear of its body while it's cruising.
 const DRAGON_HIGH_Y = 190;
 const DRAGON_PATROL_MIN_X = 170;
 const DRAGON_PATROL_MAX_X = 790;
 const DRAGON_PATROL_SPEED = 0.18; // px/ms
-// Low enough that its weak point lines up with a standing player's shoot
-// height (player.y+10, ~438 here) -- swooping to DRAGON_LOW_Y=300 like an
-// earlier version left the weak point roughly 100px above anything a
-// grounded shot could ever reach, so nothing thrown at it could land.
-const DRAGON_LOW_Y = 400;
-// The swoop dive (see swoop()) always targets an x inside this lane rather
-// than wherever the patrol happened to leave it -- keeps a corridor down
-// the middle that's reserved (see the ally position keep-out below) so the
-// dive from cruising altitude down to DRAGON_LOW_Y never has to cross
-// through an ally's column and clip through them on the way down.
+// The "vulnerable window" (see swoop()) used to be a dive down to a lower,
+// reachable altitude; it's now purely a timed color flash on the weak point
+// with no movement at all, kept inside this lane's x-keepout for the ally
+// squad below for the same reason it always was -- nothing to do with any
+// dive anymore, just a zone the squad still visually clears near mid-arena.
 const DIVE_LANE_MIN_X = 380;
 const DIVE_LANE_MAX_X = 580;
 const DIVE_LANE_MARGIN = 30;
@@ -57,9 +53,8 @@ const DIVE_LANE_MARGIN = 30;
 const WEAK_OFFSET_Y = 20;
 const SHOOT_COOLDOWN = 200;
 const PLAYER_PROJECTILE_SPEED = 520;
-// How fast the dragon itself drops down/pulls back up during a swoop, and
-// how often it starts a new one.
-const SWOOP_MOVE_DURATION = 240;
+// How often the "vulnerable" window (weak point flashes hot, hits count)
+// opens, and how long it stays open.
 const VULNERABLE_WINDOW_MS = 1000;
 const SWOOP_INTERVAL = 2600;
 // How often it throws, and how fast the fireball itself travels.
@@ -79,8 +74,10 @@ const JAIL_H = 96;
 // Each ally is the same hero figure the player controls everywhere else,
 // scaled down and tinted/faced per friend, so "gun-toting little person"
 // reads consistently across the whole game rather than a different
-// avatar style just for this scene.
-const ALLY_SCALE = 0.6;
+// avatar style just for this scene. Halved from the original 0.6 to cancel
+// out HERO_SIZE doubling (see humanoid.js) -- only the player was asked to
+// get bigger, so the squad renders at the same on-screen size as before.
+const ALLY_SCALE = 0.3;
 // The drawn head is tiny at ALLY_SCALE; enlarge the photo well past it so
 // a face is actually legible, same trick LevelScene uses for the player.
 const ALLY_FACE_SCALE = 2.3;
@@ -180,7 +177,14 @@ export default class BossScene extends Phaser.Scene {
 
     this.heroBaseKey = ensureHeroTexture(this, playerConfig.gender);
     this.player = this.physics.add.sprite(120, GROUND_Y - 100, `${this.heroBaseKey}-idle`);
-    this.player.body.setSize(22, 46).setOffset(7, 20);
+    // Body size deliberately NOT scaled up with HERO_SIZE, but the offset
+    // has to be -- see the full explanation in LevelScene.js's matching
+    // setSize/setOffset call. Without it, player.y (what the fireball
+    // hit-check and other fixed offsets are measured from) sits at the
+    // wrong height once she's standing on the ground.
+    this.player.body
+      .setSize(22, 46)
+      .setOffset((HERO_SIZE.width - 22) / 2, HERO_SIZE.height - 46 - 2);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
 
@@ -460,60 +464,33 @@ export default class BossScene extends Phaser.Scene {
     });
   }
 
+  // Opens the "vulnerable" window: the weak point flashes hot and hits
+  // start counting, on a timer -- no longer a dive down to a lower
+  // altitude, just a color flash while the dragon keeps cruising its one
+  // horizontal line exactly as always (see startPatrolFrom/
+  // queueNextPatrolLeg, untouched by this). Still guarded against two
+  // windows ever overlapping.
   swoop() {
-    // Guards against two swoop cycles ever animating at once -- the down
-    // tween, the exposed window, and the up tween overlap the weak point's
-    // own physics body updates, and a second swoop starting mid-cycle left
-    // a dangling tween touching that body after it was gone.
     if (this.finished || this.isSwooping) return;
     this.isSwooping = true;
     this.vulnerable = true;
     this.weakPoint.fillColor = PALETTE.weakHot;
-    // Stop patrolling and dive through the reserved dive lane (see
-    // DIVE_LANE_MIN_X/MAX_X and the matching ally position keep-out) --
-    // clamped toward wherever she's actually standing so the fight stays
-    // reachable, but never at an x any ally occupies, so the dive down to
-    // DRAGON_LOW_Y can't clip through the squad on the way.
-    if (this.dragonPatrolTween) this.dragonPatrolTween.remove();
-    const targetX = Phaser.Math.Clamp(this.player.x, DIVE_LANE_MIN_X, DIVE_LANE_MAX_X);
-    this.tweens.add({
-      targets: this.dragonGroup,
-      x: targetX,
-      y: DRAGON_LOW_Y,
-      duration: SWOOP_MOVE_DURATION,
-      ease: 'Sine.easeOut',
-      onComplete: () => {
-        // Landing an early hit (see tryHitDragon) retracts the dragon
-        // itself and cancels this timer -- if it didn't, this would fire
-        // after every swoop *regardless* of an early hit already having
-        // retracted the dragon, retracting it a second time and leaving
-        // it stuck off-screen for every swoop after the first hit.
-        this.swoopCloseTimer = this.time.delayedCall(VULNERABLE_WINDOW_MS, () => {
-          if (this.finished) return;
-          this.retractDragon();
-        });
-      },
+    // Landing an early hit (see tryHitDragon) closes the window itself and
+    // cancels this timer -- if it didn't, this would fire again regardless,
+    // re-closing an already-closed window.
+    this.swoopCloseTimer = this.time.delayedCall(VULNERABLE_WINDOW_MS, () => {
+      if (this.finished) return;
+      this.retractDragon();
     });
   }
 
-  // Brings the dragon back up to its high position, ending the vulnerable
-  // window, then hands it back to startPatrolFrom() to resume cruising from
-  // wherever it ended up. Called either when the window times out unhit
+  // Closes the vulnerable window. Called either when it times out unhit
   // (see swoop) or immediately when a hit lands (see tryHitDragon) --
-  // exactly one of those two paths runs per swoop, never both.
+  // exactly one of those two paths runs per window, never both.
   retractDragon() {
     this.vulnerable = false;
     this.weakPoint.fillColor = PALETTE.weakSafe;
-    this.tweens.add({
-      targets: this.dragonGroup,
-      y: DRAGON_HIGH_Y,
-      duration: SWOOP_MOVE_DURATION,
-      ease: 'Sine.easeIn',
-      onComplete: () => {
-        this.isSwooping = false;
-        if (!this.finished) this.queueNextPatrolLeg(this.dragonGroup.x);
-      },
-    });
+    this.isSwooping = false;
   }
 
   syncWeakPoint() {
@@ -530,8 +507,8 @@ export default class BossScene extends Phaser.Scene {
     // this used to launch with velocity (~0, 260), which is almost pure
     // downward drop with a tiny horizontal wobble, not a throw at her.
     const dir = this.player.x < this.dragonGroup.x ? -1 : 1;
-    const fb = this.add.circle(this.dragonGroup.x, this.dragonGroup.y + 4, 9, PALETTE.fireball);
-    fb.setStrokeStyle(2, 0xffd166, 0.8);
+    const fb = this.add.circle(this.dragonGroup.x, this.dragonGroup.y + 4, 15, PALETTE.fireball);
+    fb.setStrokeStyle(3, 0xffd166, 0.8);
     this.physics.add.existing(fb);
     this.fireballs.add(fb);
     fb.body.setAllowGravity(false);
