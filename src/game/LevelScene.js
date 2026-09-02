@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { generateLevel } from './levelConfig.js';
-import { ensureHeroTexture, animateHumanoid, headGeometry, HERO_SIZE } from './humanoid.js';
-import { ensureCritterTexture, critterTypeFor, CRITTER_SIZE } from './critters.js';
+import { ensureHeroTexture, ensureImpTexture, animateHumanoid, headGeometry, HERO_SIZE, IMP_SIZE } from './humanoid.js';
 import { createFaceOverlay } from './faceOverlay.js';
 import { ensureCirclePhotoTexture } from './circlePhoto.js';
 import { ensureWandTexture } from './weapon.js';
@@ -35,14 +34,14 @@ const PLAYER_FACE_SCALE = 1.8;
 // need, since 'contain' can't fill every corner of a non-square source.
 const MONSTER_BADGE_SIZE = 96;
 const SHOOT_COOLDOWN = 380;
-const BOSS_HP = 5;
+const BOSS_HP = 3;
 
 // How often the mini-boss throws a fireball, in ms. Ramps down slightly
 // with level difficulty but never below the floor -- kept slow/gentle on
 // purpose (this is a birthday gift, not meant to be genuinely hard).
-const BOSS_FIRE_DELAY_BASE = 3800;
+const BOSS_FIRE_DELAY_BASE = 3200;
 const BOSS_FIRE_DELAY_STEP = 50;
-const BOSS_FIRE_DELAY_MIN = 2700;
+const BOSS_FIRE_DELAY_MIN = 2200;
 
 export default class LevelScene extends Phaser.Scene {
   constructor() {
@@ -117,32 +116,7 @@ export default class LevelScene extends Phaser.Scene {
     // --- player: wears this level's friend's face while you play their level ---
     this.heroBaseKey = ensureHeroTexture(this, this.friend.gender);
     this.player = this.physics.add.sprite(cfg.spawnX, cfg.groundY - 100, `${this.heroBaseKey}-idle`);
-    // The body's own width/height are deliberately NOT scaled up with
-    // HERO_SIZE having doubled (see humanoid.js) -- a forgiving hitbox
-    // noticeably smaller than the drawn figure, same idea as most
-    // platformers. Tried the literal 2x body once; it made her collide
-    // with the mini-boss's badge from visibly further away than the art
-    // suggests, taking contact damage that read as unfair, confirmed via a
-    // real playthrough.
-    //
-    // The *offset*, though, has to scale with HERO_SIZE even though the
-    // body size doesn't: setOffset() is measured from the sprite frame's
-    // top-left corner, so leaving it at the old (7, 20) against the new,
-    // much taller frame shifted this small box up relative to the figure.
-    // Standing on the ground (body bottom resting at groundY) then meant
-    // player.y -- the frame's own center, which every fixed-pixel offset
-    // elsewhere (shoot()'s +10, the wand's +12, the face overlay) is
-    // measured from -- sat ~34px lower than before, silently misaligning
-    // all of them; shots fired from y+10 flew clean under the mini-boss
-    // and never landed a single hit, confirmed by logging real body
-    // bounds frame-by-frame. Centered horizontally, and anchored 2px
-    // above the very bottom of the frame vertically (matching exactly
-    // what the original (7, 20) worked out to against the old 36x68
-    // frame) keeps the box anchored to the same spot on her feet
-    // regardless of how big HERO_SIZE is.
-    this.player.body
-      .setSize(22, 46)
-      .setOffset((HERO_SIZE.width - 22) / 2, HERO_SIZE.height - 46 - 2);
+    this.player.body.setSize(22, 46).setOffset(7, 20);
     this.player.body.setBounce(0);
     this.player.body.setMaxVelocity(260, 900);
 
@@ -161,22 +135,16 @@ export default class LevelScene extends Phaser.Scene {
     this.bossProjectiles = this.physics.add.group({ allowGravity: false });
 
     // --- enemies: regular patrol enemies, plus an animal mini-boss guarding the fort gate ---
-    // Each patrol enemy gets its own critter type (spider/frog/snake/lizard
-    // -- see critters.js), deterministic per level+slot so a level always
-    // looks the same across replays but different levels (and different
-    // enemies within the same level) mix rather than all matching the old
-    // single red-imp look.
+    ensureImpTexture(this);
     this.enemyGroup = this.physics.add.group({ allowGravity: false, immovable: false });
-    cfg.enemies.forEach((e, i) => {
-      const critterType = critterTypeFor(this.levelIndex, i);
-      const baseKey = ensureCritterTexture(this, critterType);
-      const enemy = this.physics.add.sprite(e.x, cfg.groundY - CRITTER_SIZE.height / 2, `${baseKey}-idle`);
+    cfg.enemies.forEach((e) => {
+      const enemy = this.physics.add.sprite(e.x, cfg.groundY - IMP_SIZE.height / 2, 'imp-idle');
       enemy.body.setAllowGravity(false);
-      enemy.body.setSize(24, 16).setOffset(6, 7);
+      enemy.body.setSize(20, 34).setOffset(5, 6);
       enemy.startX = e.x - e.range / 2;
       enemy.endX = e.x + e.range / 2;
       enemy.body.setVelocityX(e.speed);
-      enemy.baseKeyName = baseKey;
+      enemy.baseKeyName = 'imp';
       this.enemyGroup.add(enemy);
     });
     this.spawnMiniBoss(cfg);
@@ -389,13 +357,8 @@ export default class LevelScene extends Phaser.Scene {
     this.bossRing = this.add.circle(guardX, guardY, MONSTER_BADGE_SIZE / 2 + 2, 0x000000, 0);
     this.bossRing.setStrokeStyle(3, ringColor, 0.9);
 
-    // One pip per HP -- was hardcoded to 3 circles from when BOSS_HP was 3;
-    // left that way after BOSS_HP became 5, every pip stayed lit red until
-    // she was already down to 2 hits left, with no visual feedback for the
-    // first 3 hits landed.
-    const pipStartX = guardX - ((BOSS_HP - 1) * 14) / 2;
-    this.bossHpPips = Array.from({ length: BOSS_HP }, (_, i) =>
-      this.add.circle(pipStartX + i * 14, guardY - MONSTER_BADGE_SIZE / 2 - 14, 5, 0xff5d5d)
+    this.bossHpPips = [0, 1, 2].map((i) =>
+      this.add.circle(guardX - 14 + i * 14, guardY - MONSTER_BADGE_SIZE / 2 - 14, 5, 0xff5d5d)
     );
 
     this.bossThrowTimer = this.time.addEvent({

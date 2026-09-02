@@ -74,10 +74,8 @@ const JAIL_H = 96;
 // Each ally is the same hero figure the player controls everywhere else,
 // scaled down and tinted/faced per friend, so "gun-toting little person"
 // reads consistently across the whole game rather than a different
-// avatar style just for this scene. Halved from the original 0.6 to cancel
-// out HERO_SIZE doubling (see humanoid.js) -- only the player was asked to
-// get bigger, so the squad renders at the same on-screen size as before.
-const ALLY_SCALE = 0.3;
+// avatar style just for this scene.
+const ALLY_SCALE = 0.6;
 // The drawn head is tiny at ALLY_SCALE; enlarge the photo well past it so
 // a face is actually legible, same trick LevelScene uses for the player.
 const ALLY_FACE_SCALE = 2.3;
@@ -177,14 +175,7 @@ export default class BossScene extends Phaser.Scene {
 
     this.heroBaseKey = ensureHeroTexture(this, playerConfig.gender);
     this.player = this.physics.add.sprite(120, GROUND_Y - 100, `${this.heroBaseKey}-idle`);
-    // Body size deliberately NOT scaled up with HERO_SIZE, but the offset
-    // has to be -- see the full explanation in LevelScene.js's matching
-    // setSize/setOffset call. Without it, player.y (what the fireball
-    // hit-check and other fixed offsets are measured from) sits at the
-    // wrong height once she's standing on the ground.
-    this.player.body
-      .setSize(22, 46)
-      .setOffset((HERO_SIZE.width - 22) / 2, HERO_SIZE.height - 46 - 2);
+    this.player.body.setSize(22, 46).setOffset(7, 20);
     this.player.body.setMaxVelocity(260, 900);
     this.physics.add.collider(this.player, ground);
 
@@ -507,8 +498,8 @@ export default class BossScene extends Phaser.Scene {
     // this used to launch with velocity (~0, 260), which is almost pure
     // downward drop with a tiny horizontal wobble, not a throw at her.
     const dir = this.player.x < this.dragonGroup.x ? -1 : 1;
-    const fb = this.add.circle(this.dragonGroup.x, this.dragonGroup.y + 4, 15, PALETTE.fireball);
-    fb.setStrokeStyle(3, 0xffd166, 0.8);
+    const fb = this.add.circle(this.dragonGroup.x, this.dragonGroup.y + 4, 9, PALETTE.fireball);
+    fb.setStrokeStyle(2, 0xffd166, 0.8);
     this.physics.add.existing(fb);
     this.fireballs.add(fb);
     fb.body.setAllowGravity(false);
