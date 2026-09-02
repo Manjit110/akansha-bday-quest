@@ -336,15 +336,17 @@ function revisitFriend(index) {
 function startBoss() {
   stopSound('clear');
   bossHpEl.style.display = 'flex';
-  btnShoot.style.display = 'flex';
+  // No controllable player character in this fight -- the whole rescued
+  // squad fires on its own (see BossScene.js) -- so the shoot button and
+  // hearts HUD, both player-only controls, stay hidden here.
+  btnShoot.style.display = 'none';
+  heartsEl.style.display = 'none';
   levelTitleEl.textContent = '';
   showScreen('screen-game');
   ensureGame();
-  renderHearts(3);
   renderBossHP(DRAGON_HP);
   game.scene.start('BossScene', {
     callbacks: {
-      onHeartsChange: renderHearts,
       onBossStart: renderBossHP,
       onDragonHit: renderBossHP,
       onVictory: () => {

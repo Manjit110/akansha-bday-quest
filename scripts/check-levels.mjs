@@ -691,9 +691,10 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
 // so it was vulnerable to the same auto-started-LevelScene crash that broke
 // revisit-after-completion -- "no dragon, level not passable". Also covers
 // the finale redesign: the full rescued squad firing from shelves, the
-// jail cell, and the fight now being fully winnable with zero player
-// input (dragonHP=10, each pip needing several hits -- see
-// HITS_PER_STAGE_* / registerHit() in BossScene.js).
+// jail cell, and the fight being winnable purely by the squad's own
+// volley -- there's no controllable player character in this scene at all
+// (dragonHP=10, each pip needing several hits -- see HITS_PER_STAGE_* /
+// registerHit() in BossScene.js).
 async function checkDragonFight(page, pageErrors) {
   console.log('\n== Dragon boss fight (must render and be winnable) ==');
 
@@ -711,22 +712,6 @@ async function checkDragonFight(page, pageErrors) {
     fail('dragon fight: BossScene never rendered the dragon');
     pageErrors.splice(before);
     return;
-  }
-
-  // Fireballs must be thrown *at* the player (horizontal), not dropped
-  // straight down with a token wobble -- a previous version launched them
-  // with velocity (~0, 260), almost pure vertical fall.
-  const fireball = await page.evaluate(() => {
-    const scene = window.__testGame.scene.getScene('BossScene');
-    scene.player.setPosition(scene.dragonGroup.x - 300, scene.player.y);
-    scene.spawnFireball();
-    const fb = scene.fireballs.getChildren().slice(-1)[0];
-    return { vx: fb.body.velocity.x, vy: fb.body.velocity.y };
-  });
-  if (Math.abs(fireball.vx) < 100 || Math.abs(fireball.vy) > 40) {
-    fail(`dragon fight: fireball velocity (${fireball.vx}, ${fireball.vy}) isn't a horizontal throw at the player`);
-  } else {
-    pass(`dragon fight: fireball thrown horizontally at the player (vx=${fireball.vx}, vy=${fireball.vy})`);
   }
 
   // The whole rescued squad should be standing by, plus the jail cell.
@@ -773,29 +758,6 @@ async function checkDragonFight(page, pageErrors) {
     fail(`dragon fight: no damage landed after 6s of real time with zero input (dragonHP still ${afterWait})`);
   } else {
     pass(`dragon fight: automated squad volley lands real damage over time with no input (dragonHP ${setup.dragonHP} -> ${afterWait})`);
-  }
-
-  // The player's own shot should still count too -- same registerHit()
-  // path as the squad, just gated behind the weak point being exposed.
-  const manualHit = await page.evaluate(
-    () =>
-      new Promise((resolve) => {
-        const scene = window.__testGame.scene.getScene('BossScene');
-        const before = scene.hitsUntilNextStage;
-        scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
-        scene.player.setFlipX(false);
-        scene.swoop();
-        setTimeout(() => {
-          scene.player.setPosition(scene.dragonGroup.x - 30, scene.player.y);
-          scene.shoot();
-          setTimeout(() => resolve({ before, after: scene.hitsUntilNextStage, dragonHP: scene.dragonHP }), 300);
-        }, 550);
-      })
-  );
-  if (manualHit.after >= manualHit.before && manualHit.dragonHP >= setup.dragonHP) {
-    fail(`dragon fight: player's own shot did not register (hitsUntilNextStage ${manualHit.before} -> ${manualHit.after})`);
-  } else {
-    pass('dragon fight: player\'s own weak-point shot still contributes damage');
   }
 
   // Now confirm the fight can always actually finish, and that beating it
