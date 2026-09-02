@@ -21,7 +21,7 @@ const FLOWER_EMOJI = ['🌸', '🌺', '🌼', '🌷', '🌻'];
 // original 480x190 card at 26px was sized around short one-liners.
 const TEXT_CARD_W = 520;
 const TEXT_CARD_H = 280;
-const TEXT_CARD_FONT_SIZE = 19;
+const TEXT_CARD_FONT_SIZE = 23;
 // The body text's own vertical budget within the card, after the
 // icon/label header and bottom margin -- used both to render and (see
 // splitIntoPages) to decide where a long answer needs to break into a
@@ -239,11 +239,28 @@ export default class RevealRoomScene extends Phaser.Scene {
     this.togetherGroup = [];
 
     if (this.textures.exists(togetherKey)) {
-      const frameW = 172;
-      const frameH = 118;
-      const outer = this.add.rectangle(cx, cy, frameW, frameH, 0xffd166);
+      // Fit the frame to the photo's own aspect ratio instead of stretching
+      // every photo into one fixed landscape box -- most of these are
+      // portrait shots, and forcing them into a 172x118 landscape frame
+      // squished them noticeably. maxH stays close to the original 118 on
+      // purpose: this spot is squeezed between the cards above and the
+      // "tap to continue" hint + progress dots below, so there's very
+      // little real headroom to grow taller without the caption (drawn
+      // just below the frame) colliding with them -- confirmed by testing
+      // a taller max height, which visibly overlapped the hint text. Width
+      // is where there's actual room to vary, so most photos (portrait or
+      // landscape, since real aspect ratios here are all well under
+      // maxW/maxH) end up height-constrained and simply narrower or wider
+      // as their real proportions call for, instead of distorted.
+      const maxW = 180;
+      const maxH = 124;
+      const src = this.textures.get(togetherKey).source[0];
+      const aspect = src.width / src.height;
+      const frameW = aspect >= maxW / maxH ? maxW : maxH * aspect;
+      const frameH = aspect >= maxW / maxH ? maxW / aspect : maxH;
+      const outer = this.add.rectangle(cx, cy, frameW + 10, frameH + 10, 0xffd166);
       const photo = this.add.image(cx, cy, togetherKey);
-      photo.setDisplaySize(frameW - 10, frameH - 10);
+      photo.setDisplaySize(frameW, frameH);
       const caption = this.add
         .text(cx, cy + frameH / 2 + 16, `Akansha & ${f.name}`, {
           fontFamily: 'Quicksand, sans-serif',
@@ -295,7 +312,10 @@ export default class RevealRoomScene extends Phaser.Scene {
 
   buildCards() {
     const f = this.friend;
-    const photoKey = f.photoTogether ? `together-friend-${f.id}` : f.photoSolo ? `face-friend-${f.id}` : null;
+    // Always her solo photo up here -- the together photo (if any) has its
+    // own dedicated spot at the bottom of the room (see
+    // createTogetherVisual), so showing it here too was redundant.
+    const photoKey = f.photoSolo ? `face-friend-${f.id}` : null;
     const textFields = [
       { icon: '🎂', label: 'Birthday Wish', text: f.message },
       { icon: '👀', label: 'First Impression', text: f.firstImpression },
