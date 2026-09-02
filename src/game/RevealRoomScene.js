@@ -13,6 +13,8 @@ const AKANSHA_PLACEHOLDER_COLOR = 0xffd166;
 // not a fresh random angle every time you revisit.
 const CARD_ROTATIONS = [-3, 2.5, -2, 3, -2.5, 2];
 
+const FLOWER_EMOJI = ['🌸', '🌺', '🌼', '🌷', '🌻'];
+
 export default class RevealRoomScene extends Phaser.Scene {
   constructor() {
     super('RevealRoomScene');
@@ -74,12 +76,20 @@ export default class RevealRoomScene extends Phaser.Scene {
 
   drawRoom() {
     const friendColor = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
-    const backdrop = mixColors(0x2a1b4d, friendColor, 0.14);
+    // Was a single flat backdrop color -- now a banded gradient (see
+    // levelThemes.drawSkyGradient for why bands instead of
+    // Graphics.fillGradientStyle, which renders wrong under the Canvas
+    // fallback) from deep indigo through magenta into a warm rose-gold,
+    // so the room reads as a lot more colorful than a flat tint.
+    const backdropTop = mixColors(0x201238, friendColor, 0.18);
+    const backdropMid = mixColors(0x5a2168, friendColor, 0.26);
+    const backdropLow = mixColors(0x8a3f5c, friendColor, 0.22);
     const floor = mixColors(0x3a2a5c, friendColor, 0.14);
     const pillar = mixColors(0x33215c, friendColor, 0.14);
-    this.cameras.main.setBackgroundColor(backdrop);
+    this.cameras.main.setBackgroundColor(backdropTop);
 
-    this.add.rectangle(W / 2, H / 2, W, H, backdrop);
+    this.drawBackdropGradient(backdropTop, backdropMid, backdropLow);
+    this.drawFloatingPetals();
     this.add.rectangle(W / 2, H - 40, W, 80, floor);
     this.add.ellipse(W / 2, H - 38, 280, 44, mixColors(0x4a3570, friendColor, 0.14), 0.55);
 
@@ -109,6 +119,89 @@ export default class RevealRoomScene extends Phaser.Scene {
       width: W,
       height: H - 180,
     });
+  }
+
+  drawBackdropGradient(topColor, midColor, lowColor) {
+    const bands = 18;
+    const bandH = H / bands;
+    for (let i = 0; i < bands; i++) {
+      const t = i / (bands - 1);
+      // Two-stage mix: indigo->magenta for the top half, magenta->rose for
+      // the bottom half.
+      const bandColor = t < 0.55 ? mixColors(topColor, midColor, t / 0.55) : mixColors(midColor, lowColor, (t - 0.55) / 0.45);
+      this.add.rectangle(W / 2, i * bandH + bandH / 2, W, bandH + 1, bandColor);
+    }
+  }
+
+  // A handful of oversized, softly drifting flower emoji behind everything
+  // else in the room -- pure color/atmosphere, not tied to any friend.
+  drawFloatingPetals() {
+    const spots = [
+      { x: 90, y: 130 },
+      { x: W - 100, y: 150 },
+      { x: 60, y: H - 160 },
+      { x: W - 70, y: H - 190 },
+      { x: W * 0.5 - 180, y: 110 },
+      { x: W * 0.5 + 200, y: H - 150 },
+    ];
+    spots.forEach(({ x, y }, i) => {
+      const emoji = FLOWER_EMOJI[i % FLOWER_EMOJI.length];
+      const petal = this.add
+        .text(x, y, emoji, { fontSize: `${20 + (i % 3) * 6}px` })
+        .setOrigin(0.5)
+        .setAlpha(0.22);
+      this.tweens.add({
+        targets: petal,
+        y: y - 16,
+        angle: i % 2 === 0 ? 10 : -10,
+        duration: 2400 + i * 260,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        delay: i * 180,
+      });
+    });
+  }
+
+  // Small flower-emoji "garland" run along one edge of a card, used four
+  // times (top/bottom/left/right) to frame it -- built as one Text per edge
+  // (space-separated, not letterSpacing: Phaser's letterSpacing splits the
+  // string per UTF-16 code unit, which breaks these emoji's surrogate pairs
+  // in half and renders tofu instead of flowers) rather than many individual
+  // emoji, so a card doesn't spawn dozens of game objects every time it's shown.
+  floralBand(count) {
+    return Array.from({ length: count }, (_, i) => FLOWER_EMOJI[i % FLOWER_EMOJI.length]).join(' ');
+  }
+
+  // The decorative flower border for a paper card: a garland along each
+  // edge plus a bigger accent bloom pinned at each corner, sized to the
+  // card's own w/h so it works for both the square photo card and the wide
+  // text cards.
+  addFloralBorder(w, h) {
+    const bandStyle = { fontSize: '14px', color: '#ffffff' };
+    const topCount = Math.max(4, Math.round(w / 30));
+    const sideCount = Math.max(3, Math.round(h / 30));
+
+    const top = this.add.text(0, -h / 2, this.floralBand(topCount), bandStyle).setOrigin(0.5);
+    const bottom = this.add.text(0, h / 2, this.floralBand(topCount), bandStyle).setOrigin(0.5);
+    const left = this.add.text(-w / 2, 0, this.floralBand(sideCount), bandStyle).setOrigin(0.5).setAngle(90);
+    const right = this.add.text(w / 2, 0, this.floralBand(sideCount), bandStyle).setOrigin(0.5).setAngle(90);
+
+    const cornerFlowers = ['🌷', '🌸', '🌼', '🌺'];
+    const cornerAngles = [-18, 18, 18, -18];
+    const corners = [
+      [-w / 2, -h / 2],
+      [w / 2, -h / 2],
+      [-w / 2, h / 2],
+      [w / 2, h / 2],
+    ].map(([cx, cy], i) =>
+      this.add
+        .text(cx, cy, cornerFlowers[i], { fontSize: '22px' })
+        .setOrigin(0.5)
+        .setAngle(cornerAngles[i])
+    );
+
+    return [top, bottom, left, right, ...corners];
   }
 
   // A photo of the two of them together, at the bottom of the room -- or,
@@ -235,9 +328,10 @@ export default class RevealRoomScene extends Phaser.Scene {
     if (card.type === 'photo') {
       const size = 176;
       const frame = this.paperCard(size, size, paperColor, borderColor, 10);
+      const border = this.addFloralBorder(size, size);
       const inner = this.add.rectangle(0, -6, size - 24, size - 24, 0x1a1035);
       let photo;
-      const parts = [frame, inner];
+      const parts = [frame, ...border, inner];
       if (card.photoKey && this.textures.exists(card.photoKey)) {
         photo = this.add.image(0, -6, card.photoKey);
         photo.setDisplaySize(size - 32, size - 32);
@@ -267,6 +361,7 @@ export default class RevealRoomScene extends Phaser.Scene {
       const w = 480;
       const h = 190;
       const frame = this.paperCard(w, h, paperColor, borderColor);
+      const border = this.addFloralBorder(w, h);
       const sealGlow = this.add.circle(-w / 2 + 42, -h / 2 + 30, 20, color, 0.18);
       const iconText = this.add.text(-w / 2 + 42, -h / 2 + 30, card.icon, { fontSize: '26px' }).setOrigin(0.5);
       const label = this.add
@@ -288,7 +383,7 @@ export default class RevealRoomScene extends Phaser.Scene {
           wordWrap: { width: w - 70 },
         })
         .setOrigin(0.5);
-      this.cardContainer.add([frame, sealGlow, iconText, label, rule, body, this.addTape(h, index)]);
+      this.cardContainer.add([frame, ...border, sealGlow, iconText, label, rule, body, this.addTape(h, index)]);
     }
 
     this.cardContainer.setRotation(Phaser.Math.DegToRad(CARD_ROTATIONS[index % CARD_ROTATIONS.length]));
