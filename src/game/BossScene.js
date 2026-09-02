@@ -53,8 +53,11 @@ const JAIL_H = 96;
 // Each ally is the same hero figure the player controls everywhere else,
 // scaled down and tinted/faced per friend, so "gun-toting little person"
 // reads consistently across the whole game rather than a different
-// avatar style just for this scene.
-const ALLY_SCALE = 0.6;
+// avatar style just for this scene. Roughly doubled from the original
+// 0.6 -- these are plain display sprites with no physics body, so
+// there's no hitbox/collision risk in making them bigger here, unlike
+// the regular-level player.
+const ALLY_SCALE = 0.85;
 // The drawn head is tiny at ALLY_SCALE; enlarge the photo well past it so
 // a face is actually legible, same trick LevelScene uses for the player.
 const ALLY_FACE_SCALE = 2.3;
