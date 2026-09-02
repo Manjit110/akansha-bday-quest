@@ -17,8 +17,11 @@
 // Order = level order. Rearrange freely; the game just walks the array in order.
 
 export const friends = [
-  mkFriend(1, 'Arpit', '#ff8fab', 'male', '/friends/arpit-face.jpg'),
+  mkFriend(1, 'Arpit', '#ff8fab', 'male', '/friends/arpit-face.jpg', {
+    photoTogether: '/friends/arpit-together.jpg',
+  }),
   mkFriend(5, 'Karan', '#ff9770', 'male', '/friends/karan-face.jpg', {
+    photoTogether: '/friends/karan-together.jpg',
     message: 'Happy Bday Akansha! 🎂🥳 Hope you have an amazing one and a fantastic year ahead! ❤️',
     firstMet: 'Helios launch party.',
     firstImpression: 'Theek hi thi 😂',
@@ -28,6 +31,7 @@ export const friends = [
   }),
   mkFriend(6, 'Bhumi', '#8ecae6', 'female', '/friends/bhumi-face.jpg'),
   mkFriend(7, 'Mahak', '#f4a261', 'female', '/friends/mahak-face.jpg', {
+    photoTogether: '/friends/mahak-together.jpg',
     message: 'Happy Birthday Akansha',
     firstMet: 'Through my Husband',
     firstImpression: 'Same as Abhishek',
@@ -35,6 +39,7 @@ export const friends = [
     quality: 'Same as Abhishek',
   }),
   mkFriend(8, 'Abhishek Loblaws', '#b5e48c', 'male', '/friends/abhishek-loblaws-face.jpg', {
+    photoTogether: '/friends/abhishek-loblaws-together.jpg',
     message: 'Happy Birthday Akansha',
     firstMet: 'Loblaws',
     firstImpression: 'Same as Mahak',
@@ -42,6 +47,7 @@ export const friends = [
     quality: 'Same as Mahak',
   }),
   mkFriend(9, 'Rashika', '#ffafcc', 'female', '/friends/rashika-face.jpg', {
+    photoTogether: '/friends/rashika-together.jpg',
     message: `Happy birthday to my Akansha ❤️🥹
 
 You’re not just a friend, you’re genuinely my sister, and honestly, I don’t even want to imagine my life without you in it. Like… what would I actually do without you?! Who would I go to for strength, validation, questionable advice, emotional support, gossip and just general life survival?! 😂
@@ -68,6 +74,7 @@ Happy birthday, my girl. I love you more than words can explain`,
   }),
   mkFriend(10, 'Adi', '#a0c4ff', 'male', '/friends/adi-face.jpg', {
     // guessed -- unisex short name, double-check
+    photoTogether: '/friends/adi-together.jpg',
     message:
       'Happy Birthday, Akansha! 🥳🎂❤️ It’s funny to think that I first met you when you were just Kashish’s roommate in Delhi, and somehow you ended up becoming such a good friend. Really glad that random introduction turned into a friendship. Hope you have an amazing birthday and an even better year ahead. Stay your crazy, fun, caring self. Wishing you lots of happiness, success, and good memories. Have the best one! ❤️🥂',
     firstMet: 'I first met Akansha at her place in Delhi when she was Kashish’s roommate.',
@@ -79,6 +86,7 @@ Happy birthday, my girl. I love you more than words can explain`,
       'I really appreciate how genuine and caring she is. Once she considers you a friend, she genuinely cares about you and is always there when it matters.',
   }),
   mkFriend(14, 'Sara', '#9bf6ff', 'female', '/friends/sara-face.jpg', {
+    photoTogether: '/friends/sara-together.jpg',
     message: `Happy Birthday, Akansha! 🎉❤️
 You are like a big sister to me. I feel such a strong connection with you, and whenever I’m with you, it feels like I’ve known you for ages. I truly admire you, your dressing sense, your confidence, and the way you speak.
 
@@ -91,6 +99,7 @@ I really want you to always be a part of my life because you are such a wonderfu
     quality: 'Your confidence',
   }),
   mkFriend(15, 'Manish', '#bdb2ff', 'male', '/friends/manish-face.jpg', {
+    photoTogether: '/friends/manish-together.jpg',
     message: `Happy birthday Akansha! 🎂
 
 From Montreal to living together at 1645 to now both ending up in Toronto. Funny how life just worked out that way.
@@ -107,6 +116,7 @@ Love you lots Akansha. Here’s to many many more years of friendship💛`,
   }),
   mkFriend(18, 'Gurseerut', '#72efdd', 'female', '/friends/gurseerut-face.jpg', {
     // guessed -- unisex Punjabi name, double-check
+    photoTogether: '/friends/gurseerut-together.jpg',
     message: `Happy Birthday to my Akansha! ❤️🥹
 
 Who knew the person I met because of Pulkit would become such a special friend to me? 😂❤️ You’re bossy, dramatic and impossible to reach sometimes 😭😂, but behind all that attitude is one of the sweetest and warmest hearts.
@@ -128,6 +138,7 @@ And yes, even though you don’t pick up my calls at first place and sometimes t
 And I especially love how your bossiness somehow comes with a lot of care- you’re always trying to bring people together, make plans happen and make sure everyone is included. ❤️`,
   }),
   mkFriend(19, 'Jyotirmay', '#ffb4a2', 'male', '/friends/jyotirmay-face.jpg', {
+    photoTogether: '/friends/jyotirmay-together.jpg',
     message: 'HBD Akangsha',
     firstMet: 'Nitpreet ke ghar pe',
     firstImpression: 'ये दीदी कौन हैं?',
@@ -135,6 +146,7 @@ And I especially love how your bossiness somehow comes with a lot of care- you�
     quality: 'Refers me to jobs',
   }),
   mkFriend(12, 'Zalak', '#caffbf', 'female', '/friends/zalak-face.jpg', {
+    photoTogether: '/friends/zalak-together.jpg',
     message: `Happy Birthday, CEO! 👑🎂
 
 May you continue conquering the world with your courageous spirit, confidence, and that “I know what I’m doing” attitude, even when absolutely nobody knows what’s going on. 😂 Stay happy, healthy, crazy, and exactly the same… because honestly, the world already has enough boring people! ❤️
@@ -161,6 +173,7 @@ From our legendary 1645 meetups, to drunk nights and absolutely questionable dan
     quality: 'Always a vibe, always full of life, and my forever dance partner 💃',
   }),
   mkFriend(13, 'Piyush', '#fdffb6', 'male', '/friends/piyush-face.jpg', {
+    photoTogether: '/friends/piyush-together.jpg',
     message: `🎂😂 Happy Birthday Akansha! 😂🎂
 
 First of all, stay healthy, keep travelling, mast ghumo-firo, duniya explore karo 🌎✈️ and enjoy life to the fullest!
@@ -209,6 +222,7 @@ From the girl telling me “Canada mein sab mast hai” to now khud Canada mein 
 And obviously… GREAT DANCER! 💃😂`,
   }),
   mkFriend(3, 'Ritika', '#7fe7d6', 'female', '/friends/ritika-face.jpg', {
+    photoTogether: '/friends/ritika-together.jpg',
     message: `Happy birthday, Baby! ❤️ I hope you always know how loved and appreciated you are. You’re genuinely one of those people who makes life better just by being in it.
 
 I absolutely adore what we have, and honestly, how desperate I get when I don’t get to meet you every week should be enough proof of that 😂
@@ -225,6 +239,7 @@ Happy birthday once again, my girl. 😘`,
       'Her brutal honesty. She says what she thinks and owns it. Even when everyone else is thinking the same thing but nobody wants to say it, she’ll be the one to say it 😂 And I really admire that about her. Also, not to forget, her high moral ground never changes with situations - iykyk 😉',
   }),
   mkFriend(4, 'Abhishek', '#c77dff', 'male', '/friends/abhishek-face.jpg', {
+    photoTogether: '/friends/abhishek-together.jpg',
     message: `Happy birthday babe. May god shower you with all the happiness, love and multiple europe trips like this in your life.
 So lucky to have you as my partner in crime(literally).
 Stay free and stay wild.
@@ -239,6 +254,7 @@ Baki Raj Shamani rocks 🤘`,
     quality: 'She’s always one for her homies. No matter what, you know you could count on her; basically chutiya cheezon main bhi support krti hai😝',
   }),
   mkFriend(17, 'Disha', '#ffd6a5', 'female', '/friends/disha-face.jpg', {
+    photoTogether: '/friends/disha-together.jpg',
     message: 'Aditi to my Naina, Allie to my Hannah ❤️\nI\'d choose you always. Every version of you !\nLove you always. Happy Birthday Aks 🎂',
     firstMet: 'undergrad (its been 11 years !!)',
     firstImpression: 'def not my vibe',
@@ -248,6 +264,7 @@ Baki Raj Shamani rocks 🤘`,
   }),
   mkFriend(11, 'Nitpreet', '#ffc6ff', 'female', '/friends/nitpreet-face.jpg', {
     // guessed -- unisex Punjabi name, double-check
+    photoTogether: '/friends/nitpreet-together.jpg',
     message: `Happy birthday Akansha❤️
 You’re a friend that I think no one deserves😒😒…..
 Because if everyone were getting this level of friends then we’d never understand how good a friend you’re to us, and we would lose the exclusivity. I sometimes miss our bakchodi Montreal time together and really cherish the great time we had in Montreal. The day you left for Toronto, Montreal stopped feeling like home for me — it felt like settling in the city all over again.
@@ -260,7 +277,9 @@ But no matter where life takes you, I’ll be by your side through it all. Keep 
     quality:
       'How much effort she puts into caring for the people she loves. It’s not just a one-time thing — she actually keeps showing up for it consistently.',
   }),
-  mkFriend(16, 'Manjit', '#ff99c8', 'male', '/friends/manjit-face.jpg'),
+  mkFriend(16, 'Manjit', '#ff99c8', 'male', '/friends/manjit-face.jpg', {
+    photoTogether: '/friends/manjit-together.jpg',
+  }),
   mkFriend(2, 'Pulkit (Husband)', '#ffd166', 'male', '/friends/pulkit-face.jpg', {
     message: `Happy Birthday, my love ❤️! It has been a long time since we met yet it just feels like yesterday. We practically have spent 1/3rd of our lives together.
 
@@ -283,7 +302,7 @@ function mkFriend(id, name, color, gender, photoSolo = null, extra = {}) {
   return {
     id,
     name,
-    photoTogether: null,
+    photoTogether: extra.photoTogether ?? null,
     photoSolo,
     color,
     gender,
