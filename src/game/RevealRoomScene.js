@@ -15,6 +15,27 @@ const CARD_ROTATIONS = [-3, 2.5, -2, 3, -2.5, 2];
 
 const FLOWER_EMOJI = ['🌸', '🌺', '🌼', '🌷', '🌻'];
 
+// Text cards (birthday wish, first impression, etc) got noticeably
+// bigger, and their font noticeably smaller, once real long-form answers
+// started coming in -- some run to several hundred words, and the
+// original 480x190 card at 26px was sized around short one-liners.
+const TEXT_CARD_W = 520;
+const TEXT_CARD_H = 280;
+const TEXT_CARD_FONT_SIZE = 19;
+// The body text's own vertical budget within the card, after the
+// icon/label header and bottom margin -- used both to render and (see
+// splitIntoPages) to decide where a long answer needs to break into a
+// second card rather than overflow the frame.
+const TEXT_CARD_BODY_MAX_HEIGHT = 190;
+const TEXT_STYLE = {
+  fontFamily: 'Caveat, cursive',
+  fontSize: `${TEXT_CARD_FONT_SIZE}px`,
+  fontStyle: '600',
+  color: '#3a2a3a',
+  align: 'center',
+  wordWrap: { width: TEXT_CARD_W - 70 },
+};
+
 export default class RevealRoomScene extends Phaser.Scene {
   constructor() {
     super('RevealRoomScene');
@@ -275,14 +296,82 @@ export default class RevealRoomScene extends Phaser.Scene {
   buildCards() {
     const f = this.friend;
     const photoKey = f.photoTogether ? `together-friend-${f.id}` : f.photoSolo ? `face-friend-${f.id}` : null;
-    return [
-      { type: 'photo', label: f.name, photoKey },
+    const textFields = [
       { icon: '🎂', label: 'Birthday Wish', text: f.message },
       { icon: '👀', label: 'First Impression', text: f.firstImpression },
       { icon: '🤝', label: 'Where We Met', text: f.firstMet },
       { icon: '😊', label: 'Impression Now', text: f.nowImpression },
       { icon: '❤️', label: 'What She Loves About Her', text: f.quality },
     ];
+    // A short one-liner stays a single card; a long-form answer (some run
+    // to several hundred words) splits into multiple, numbered cards
+    // instead of overflowing the frame -- reusing the same tap-to-continue
+    // navigation already used to move between fields, rather than a
+    // separate scrolling UI.
+    const textCards = textFields.flatMap(({ icon, label, text }) => {
+      const pages = this.splitIntoPages(text);
+      return pages.map((pageText, i) => ({
+        type: 'text',
+        icon,
+        label: pages.length > 1 ? `${label} (${i + 1}/${pages.length})` : label,
+        text: pageText,
+      }));
+    });
+    return [{ type: 'photo', label: f.name, photoKey }, ...textCards];
+  }
+
+  // Greedily packs a long answer into as few cards as will fit, measured
+  // with a real (invisible) Text object using the exact style/wordWrap the
+  // card actually renders with -- accurate regardless of font/emoji-width
+  // quirks, unlike guessing from character counts. Prefers to break on a
+  // blank line between paragraphs; only falls back to breaking mid-
+  // paragraph (on a sentence boundary) if a single paragraph alone would
+  // overflow a card by itself.
+  splitIntoPages(text) {
+    if (!text) return [''];
+    const measurer = this.add.text(0, 0, '', TEXT_STYLE).setVisible(false);
+    const fits = (s) => {
+      measurer.setText(s);
+      return measurer.height <= TEXT_CARD_BODY_MAX_HEIGHT;
+    };
+
+    const units = [];
+    text
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .forEach((para) => {
+        if (fits(para)) {
+          units.push(para);
+          return;
+        }
+        const sentences = para.split(/(?<=[.!?])\s+/);
+        let chunk = '';
+        sentences.forEach((s) => {
+          const candidate = chunk ? `${chunk} ${s}` : s;
+          if (fits(candidate) || !chunk) chunk = candidate;
+          else {
+            units.push(chunk);
+            chunk = s;
+          }
+        });
+        if (chunk) units.push(chunk);
+      });
+
+    const pages = [];
+    let current = '';
+    units.forEach((unit) => {
+      const candidate = current ? `${current}\n\n${unit}` : unit;
+      if (fits(candidate) || !current) current = candidate;
+      else {
+        pages.push(current);
+        current = unit;
+      }
+    });
+    if (current) pages.push(current);
+
+    measurer.destroy();
+    return pages.length ? pages : [''];
   }
 
   // A small strip of "tape" straddling the top edge, so the card reads as
@@ -358,8 +447,8 @@ export default class RevealRoomScene extends Phaser.Scene {
       parts.push(label, this.addTape(size, index));
       this.cardContainer.add(parts);
     } else {
-      const w = 480;
-      const h = 190;
+      const w = TEXT_CARD_W;
+      const h = TEXT_CARD_H;
       const frame = this.paperCard(w, h, paperColor, borderColor);
       const border = this.addFloralBorder(w, h);
       const sealGlow = this.add.circle(-w / 2 + 42, -h / 2 + 30, 20, color, 0.18);
@@ -373,16 +462,7 @@ export default class RevealRoomScene extends Phaser.Scene {
         })
         .setOrigin(0, 0.5);
       const rule = this.add.rectangle(-w / 2 + 74, -h / 2 + 46, label.width, 2, color, 0.6).setOrigin(0, 0.5);
-      const body = this.add
-        .text(0, 22, card.text || '', {
-          fontFamily: 'Caveat, cursive',
-          fontSize: '26px',
-          fontStyle: '600',
-          color: '#3a2a3a',
-          align: 'center',
-          wordWrap: { width: w - 70 },
-        })
-        .setOrigin(0.5);
+      const body = this.add.text(0, 22, card.text || '', TEXT_STYLE).setOrigin(0.5);
       this.cardContainer.add([frame, ...border, sealGlow, iconText, label, rule, body, this.addTape(h, index)]);
     }
 
