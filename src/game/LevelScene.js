@@ -21,7 +21,7 @@ const PALETTE = {
 
 // The face shown on the player is enlarged relative to the drawn head, so
 // it reads clearly at this small sprite scale (and just looks fun/chibi).
-const PLAYER_FACE_SCALE = 1.8;
+const PLAYER_FACE_SCALE = 2.1;
 // Each level's mini-boss is a real monster image, not a procedurally
 // drawn animal -- cropped to a circular badge (see circlePhoto.js) so an
 // opaque background baked into the source (several of these are plain

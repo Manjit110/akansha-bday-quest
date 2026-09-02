@@ -210,8 +210,8 @@ html, body {
 }
 
 .map-node {
-  width: 64px;
-  height: 64px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -479,7 +479,7 @@ html, body {
 }
 
 @media (max-width: 480px) {
-  .map-node { width: 52px; height: 52px; font-size: 18px; }
+  .map-node { width: 60px; height: 60px; font-size: 18px; }
 }
 
 /* --- phone/tablet block screen --- */
