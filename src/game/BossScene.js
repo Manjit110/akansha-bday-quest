@@ -48,8 +48,8 @@ const ALLY_FIRE_INTERVAL = 260;
 const ALLY_PROJECTILE_DURATION = 220;
 const JAIL_X = 480;
 const JAIL_Y = 84;
-const JAIL_W = 118;
-const JAIL_H = 96;
+const JAIL_W = 150;
+const JAIL_H = 124;
 // Each ally is the same hero figure the player controls everywhere else,
 // scaled down and tinted/faced per friend, so "gun-toting little person"
 // reads consistently across the whole game rather than a different
