@@ -29,7 +29,21 @@ export const friends = [
     quality:
       'I like that she doesn’t keep her thoughts about you to herself. If she thinks something, she’ll just say it straight up — no filter 😂',
   }),
-  mkFriend(6, 'Bhumi', '#8ecae6', 'female', '/friends/bhumi-face.jpg'),
+  mkFriend(6, 'Bhumi', '#8ecae6', 'female', '/friends/bhumi-face.jpg', {
+    message:
+      'You already know this, but I’m telling you again .. love you to the moon and back! ❤️ Happiest Birthday, baby! 🥰 Thank God Karu found you! I genuinely cannot imagine Canada, or my life here, without you. ♥️🤗🥰',
+    firstMet:
+      'When I met you for the first time, I think we instantly clicked. But when I first saw you, my thought was, “Hi-fi hai, but she is sweet!” 😂❤️',
+    firstImpression: 'Hi-fi hai, but she is sweet! 😂❤️',
+    nowImpression: `Dominating, but mostly because you dominate our hearts! ❤️
+Bossy, but only because you want to boss everyone around and make sure every occasion is extra special! 😂
+Moody because you want everything around you done to perfection ! 🥰
+And of all the things you are, my favourite is that you are love. ❤️
+
+If there’s one quality I don’t love about you, it’s that you overthink and take everything upon yourself.`,
+    quality:
+      'The one thing I absolutely LOVE about you is that you can go miles just to make someone feel special. And honestly, that is one of the most beautiful things about you. ❤️',
+  }),
   mkFriend(7, 'Mahak', '#f4a261', 'female', '/friends/mahak-face.jpg', {
     photoTogether: '/friends/mahak-together.jpg',
     message: 'Happy Birthday Akansha',
