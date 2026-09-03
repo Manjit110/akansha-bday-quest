@@ -9,6 +9,8 @@
 // than a place. Every layer here either gets a gradient, a soft glow, or
 // some per-shape jitter so nothing repeats identically.
 
+import { createAmbientSparkles } from './particles.js';
+
 function tileCount(width, spacing) {
   return Math.ceil(width / spacing) + 1;
 }
@@ -90,6 +92,44 @@ function drawHaze(scene, cfg, color, scrollFactor) {
   }
 }
 
+// A couple of very faint diagonal beams of light -- sun through jungle
+// canopy, or desert glare -- one soft outer rectangle plus a thinner core,
+// both barely-there alpha so they read as haze catching the light rather
+// than a solid column. Placed within the initial viewport only, same
+// constraint as glowOrb/drawClouds above.
+function drawLightShafts(scene, cfg, color, scrollFactor, count) {
+  for (let i = 0; i < count; i++) {
+    const x = rand(150, 800);
+    const angle = rand(9, 15);
+    const beam = scene.add.rectangle(x, cfg.groundY - 300, rand(30, 46), 420, color, 0.018);
+    beam.setScrollFactor(scrollFactor);
+    beam.setAngle(angle);
+    const core = scene.add.rectangle(x, cfg.groundY - 300, rand(10, 16), 420, color, 0.025);
+    core.setScrollFactor(scrollFactor);
+    core.setAngle(angle);
+  }
+}
+
+// A jagged silhouette (dune ridge, mesa, distant hill) built from a hand-
+// placed point path instead of a smooth primitive shape -- a plain ellipse
+// or triangle reads as an icon, a slightly irregular ridge line reads as an
+// actual landform.
+function drawRidge(scene, cfg, baseX, spread, peakH, color, scrollFactor) {
+  const g = scene.add.graphics();
+  g.fillStyle(color, 1);
+  const segments = 6;
+  const points = [{ x: baseX - spread, y: cfg.groundY + 60 }];
+  for (let s = 0; s <= segments; s++) {
+    const t = s / segments;
+    const dip = Math.sin(t * Math.PI) * peakH * rand(0.82, 1.08);
+    points.push({ x: baseX - spread + t * spread * 2, y: cfg.groundY - dip });
+  }
+  points.push({ x: baseX + spread, y: cfg.groundY + 60 });
+  g.fillPoints(points, true);
+  g.setScrollFactor(scrollFactor);
+  return g;
+}
+
 function drawHills(scene, cfg, p) {
   drawSkyGradient(scene, cfg, p.skyTop, p.skyHorizon);
   drawClouds(scene, cfg, 0xfff0e6, 0.15, 4);
@@ -152,7 +192,17 @@ function drawMountains(scene, cfg, p) {
 
 function drawCity(scene, cfg, p) {
   drawSkyGradient(scene, cfg, p.skyTop, p.skyHorizon);
-  glowOrb(scene, 780, 65, 24, 0xfbe8d3, 0.15);
+  glowOrb(scene, 780, 62, 24, 0xfbe8d3, 0.15);
+
+  // a hazy, blurred-looking skyline well behind the real buildings -- flat
+  // silhouettes with no windows and low alpha, so the eye reads it as miles
+  // away rather than another row of the same buildings
+  for (let i = 0; i < tileCount(cfg.width, 105); i++) {
+    const bx = i * 105 + 50 + rand(-10, 10);
+    const bh = 45 + ((i * 71) % 95) + rand(-10, 10);
+    const shade = mixInto(p.skyHorizon, p.layer1, 0.6);
+    scene.add.rectangle(bx, cfg.groundY - bh / 2, 55 + rand(-6, 6), bh, shade, 0.5).setScrollFactor(0.15);
+  }
 
   for (let i = 0; i < tileCount(cfg.width, 150); i++) {
     const bx = i * 150 + 60 + rand(-12, 12);
@@ -162,19 +212,37 @@ function drawCity(scene, cfg, p) {
     const building = scene.add.rectangle(bx, cfg.groundY - bh / 2, bw, bh, shade);
     building.setScrollFactor(0.3);
 
-    // a little rooftop clutter so the skyline silhouette isn't just boxes
-    if (Math.random() < 0.6) {
+    // a soft rim of light down one edge so the building reads as a lit
+    // volume catching the skyline glow, not a flat cutout
+    scene.add.rectangle(bx + bw / 2 - 2, cfg.groundY - bh / 2, 3, bh, mixInto(shade, 0xffffff, 0.22), 0.55).setScrollFactor(0.3);
+
+    // rooftop clutter -- a mix of antenna/water-tower/vent instead of the
+    // same two shapes on every roof
+    const roofRoll = Math.random();
+    if (roofRoll < 0.28) {
+      const antenna = scene.add.rectangle(bx, cfg.groundY - bh - 14, 2, 28, mixInto(shade, 0x000000, 0.4));
+      antenna.setScrollFactor(0.3);
+      const beacon = scene.add.circle(bx, cfg.groundY - bh - 26, 2.5, 0xff5a5a, 0.9);
+      beacon.setScrollFactor(0.3);
+      scene.tweens.add({ targets: beacon, alpha: 0.15, duration: 700, yoyo: true, repeat: -1 });
+    } else if (roofRoll < 0.5) {
+      const legY = cfg.groundY - bh - 4;
+      scene.add.rectangle(bx, legY, bw * 0.3, 14, mixInto(shade, 0x000000, 0.3)).setScrollFactor(0.3);
+      scene.add.ellipse(bx, legY - 12, bw * 0.34, 16, mixInto(shade, 0x000000, 0.2)).setScrollFactor(0.3);
+    } else if (roofRoll < 0.75) {
       scene.add.rectangle(bx + rand(-bw / 4, bw / 4), cfg.groundY - bh - 8, 10, 16, shade).setScrollFactor(0.3);
-    }
-    if (Math.random() < 0.4) {
-      scene.add.rectangle(bx, cfg.groundY - bh - 18, 2, 20, mixInto(shade, 0x000000, 0.4)).setScrollFactor(0.3);
     }
 
     for (let wy = cfg.groundY - bh + 14; wy < cfg.groundY - 10; wy += 18) {
       for (let wx = bx - bw / 2 + 10; wx < bx + bw / 2 - 6; wx += 16) {
         if (((wx + wy) % 37) < 20) continue; // sparse, some windows dark
         const warm = Math.random() < 0.7;
-        scene.add.rectangle(wx, wy, 6, 8, warm ? 0xffd166 : 0x9fd8ff, warm ? 0.55 : 0.4).setScrollFactor(0.3);
+        const win = scene.add.rectangle(wx, wy, 6, 8, warm ? 0xffd166 : 0x9fd8ff, warm ? 0.55 : 0.4);
+        win.setScrollFactor(0.3);
+        // a rare few windows flicker slowly, like someone's still up
+        if (Math.random() < 0.05) {
+          scene.tweens.add({ targets: win, alpha: 0.1, duration: 1500 + rand(0, 1200), yoyo: true, repeat: -1, delay: rand(0, 2000) });
+        }
       }
     }
   }
@@ -184,6 +252,14 @@ function drawCity(scene, cfg, p) {
     scene.add.rectangle(bx, cfg.groundY - bh / 2, 90, bh, mixInto(p.layer2, 0x000000, rand(0, 0.1))).setScrollFactor(0.5);
   }
 
+  // street lamps along the sidewalk -- warm pools of light at ground level,
+  // so the scene has a foreground and doesn't stop at the skyline
+  for (let i = 0; i < tileCount(cfg.width, 260); i++) {
+    const lx = i * 260 + 130 + rand(-20, 20);
+    scene.add.rectangle(lx, cfg.groundY - 30, 3, 60, mixInto(p.layer2, 0x000000, 0.3)).setScrollFactor(0.55);
+    glowOrb(scene, lx, cfg.groundY - 60, 6, 0xffd88a, 0.55);
+  }
+
   // warm smog/light-pollution glow along the skyline, tying the buildings
   // into the horizon color instead of a hard silhouette cutoff
   drawHaze(scene, cfg, p.skyHorizon, 0.4);
@@ -191,43 +267,130 @@ function drawCity(scene, cfg, p) {
 
 function drawForest(scene, cfg, p) {
   drawSkyGradient(scene, cfg, p.skyTop, p.skyHorizon);
-  glowOrb(scene, 220, 60, 18, 0xdff2e8, 0.12);
+  glowOrb(scene, 220, 55, 18, 0xdff2e8, 0.12);
+  drawLightShafts(scene, cfg, 0xfff3d0, 0.14, 3);
 
-  function pine(x, scale, color, scrollFactor) {
-    const w = 70 * scale;
-    const h = 150 * scale;
-    const shade = mixInto(color, Math.random() < 0.5 ? 0x000000 : 0xffffff, rand(0, 0.1));
-    const trunk = scene.add.rectangle(x, cfg.groundY - 6 * scale, 8 * scale, 16 * scale, 0x2a1f3a);
+  // a fog-softened band of far canopy, well behind the real trees, so the
+  // jungle reads as going back for miles instead of stopping at one tree line
+  for (let i = 0; i < tileCount(cfg.width, 85); i++) {
+    const bx = i * 85 + rand(-18, 18);
+    const bh = 55 + rand(-10, 25);
+    const mist = mixInto(p.skyHorizon, p.layer1, 0.55);
+    scene.add.ellipse(bx, cfg.groundY - bh / 2, 120, bh, mist, 0.35).setScrollFactor(0.08);
+  }
+
+  // Broadleaf canopy trees -- several overlapping soft blobs per crown
+  // instead of one stacked-triangle pine, since a single hard-edged cone
+  // reads as a conifer icon rather than actual jungle foliage. A buttress
+  // root flare + occasional hanging vine sell the "leaning into the canopy"
+  // read.
+  function canopyTree(x, scale, color, scrollFactor, lean) {
+    const trunkH = 58 * scale;
+    const trunkTopY = cfg.groundY - trunkH;
+    const trunkShade = mixInto(color, 0x140d22, 0.55);
+    scene.add.triangle(x, cfg.groundY, -16 * scale, 0, 0, -20 * scale, 16 * scale, 0, trunkShade).setScrollFactor(scrollFactor);
+    const trunk = scene.add.rectangle(x + lean * 4, cfg.groundY - trunkH / 2, 9 * scale, trunkH, trunkShade);
     trunk.setScrollFactor(scrollFactor);
-    for (let t = 0; t < 3; t++) {
-      const ty = cfg.groundY - h * 0.35 - t * h * 0.28;
-      const tw = w * (1 - t * 0.22);
-      scene.add.triangle(x, ty - h * 0.22, -tw / 2, h * 0.32, 0, -h * 0.1, tw / 2, h * 0.32, shade).setScrollFactor(scrollFactor);
+    trunk.setAngle(lean * 3);
+
+    const canopyY = trunkTopY - 6 * scale;
+    const blobCount = 5;
+    for (let b = 0; b < blobCount; b++) {
+      const angle = (b / blobCount) * Math.PI * 2;
+      const bx2 = x + lean * 10 + Math.cos(angle) * 26 * scale;
+      const by2 = canopyY - 10 * scale + Math.sin(angle) * 15 * scale;
+      const shade = mixInto(color, Math.random() < 0.5 ? 0x0c1f14 : 0xdcefc8, rand(0.05, 0.22));
+      scene.add.ellipse(bx2, by2, 48 * scale, 34 * scale, shade, 0.92).setScrollFactor(scrollFactor);
+    }
+    // top-lit highlight blob, catches the canopy light from above
+    scene.add.ellipse(x + lean * 10 - 8 * scale, canopyY - 22 * scale, 32 * scale, 22 * scale, mixInto(color, 0xf3ffe0, 0.3), 0.75).setScrollFactor(scrollFactor);
+
+    if (Math.random() < 0.4) {
+      const vine = scene.add.graphics();
+      vine.lineStyle(2, mixInto(color, 0x0c1f14, 0.5), 0.6);
+      const vx = x + lean * 10 + rand(-20, 20) * scale;
+      const vLen = rand(30, 68) * scale;
+      vine.beginPath();
+      vine.moveTo(vx, canopyY);
+      vine.lineTo(vx + rand(-6, 6), canopyY + vLen * 0.5);
+      vine.lineTo(vx + rand(-10, 10), canopyY + vLen);
+      vine.strokePath();
+      vine.setScrollFactor(scrollFactor);
     }
   }
 
-  for (let i = 0; i < tileCount(cfg.width, 260); i++) {
-    pine(i * 260 + 70 + rand(-30, 30), 1.15 * rand(0.9, 1.1), p.layer1, 0.3);
+  for (let i = 0; i < tileCount(cfg.width, 230); i++) {
+    canopyTree(i * 230 + 70 + rand(-30, 30), 1.05 * rand(0.9, 1.15), p.layer1, 0.3, rand(-1, 1));
   }
-  for (let i = 0; i < tileCount(cfg.width, 190); i++) {
-    pine(i * 190 + 170 + rand(-25, 25), 0.8 * rand(0.85, 1.15), p.layer2, 0.5);
+  for (let i = 0; i < tileCount(cfg.width, 165); i++) {
+    canopyTree(i * 165 + 150 + rand(-25, 25), 0.75 * rand(0.85, 1.1), p.layer2, 0.5, rand(-1, 1));
+  }
+
+  // ferns/undergrowth hugging the ground line, so the forest floor has
+  // texture instead of a bare haze band
+  for (let i = 0; i < tileCount(cfg.width, 38); i++) {
+    if (Math.random() < 0.35) continue;
+    const fx = i * 38 + rand(-12, 12);
+    const fh = rand(10, 20);
+    const shade = mixInto(p.layer2, 0x0c1f14, rand(0, 0.3));
+    scene.add.triangle(fx, cfg.groundY, -7, 0, 0, -fh, 7, 0, shade).setScrollFactor(0.65);
   }
 
   drawHaze(scene, cfg, p.skyHorizon, 0.4);
   scene.add.rectangle(cfg.width / 2, cfg.groundY - 20, cfg.width, 40, p.layer2, 0.3).setScrollFactor(0.5);
+
+  // fireflies drifting at canopy height -- a fixed warm palette (like the
+  // room's own ambient sparkles) so they read against any friend-tinted sky
+  createAmbientSparkles(scene, {
+    x: 0,
+    y: cfg.groundY - 220,
+    width: cfg.width,
+    height: 180,
+    scrollFactor: 0.5,
+    colors: [0xd9ff8a, 0xfff3b0],
+  });
 }
 
 function drawDesert(scene, cfg, p) {
   drawSkyGradient(scene, cfg, p.skyTop, p.skyHorizon);
-  glowOrb(scene, 680, 68, 30, 0xffdca0, 0.15);
+  glowOrb(scene, 680, 66, 32, 0xffe3ad, 0.15);
+  drawLightShafts(scene, cfg, 0xffe6b8, 0.12, 2);
 
-  for (let i = 0; i < tileCount(cfg.width, 420); i++) {
-    const jH = rand(0.85, 1.15);
-    const dune = scene.add.ellipse(i * 420 + 120 + rand(-30, 30), cfg.groundY + 80, 560 * jH, 190 * jH, p.layer1);
-    dune.setScrollFactor(0.25);
-    const dune2 = scene.add.ellipse(i * 420 + 340 + rand(-25, 25), cfg.groundY + 100, 420 * rand(0.85, 1.1), 150, p.layer2);
-    dune2.setScrollFactor(0.45);
+  // distant mesas, flat-topped and well behind the dunes, so the desert has
+  // a horizon landmark instead of just rolling sand to infinity
+  for (let i = 0; i < tileCount(cfg.width, 520); i++) {
+    const mx = i * 520 + 220 + rand(-60, 60);
+    const mh = rand(70, 120);
+    const mw = rand(150, 230);
+    const shade = mixInto(p.skyHorizon, p.layer1, 0.55);
+    scene.add.rectangle(mx, cfg.groundY - mh / 2 + 12, mw, mh, shade, 0.55).setScrollFactor(0.12);
+    scene.add.rectangle(mx, cfg.groundY - mh + 4, mw * 0.6, 12, shade, 0.55).setScrollFactor(0.12);
   }
+
+  // dune ridges as a jagged wind-carved silhouette (drawRidge) instead of a
+  // smooth ellipse, which read as a bubble rather than sand
+  for (let i = 0; i < tileCount(cfg.width, 420); i++) {
+    drawRidge(scene, cfg, i * 420 + 120 + rand(-30, 30), 260 * rand(0.9, 1.1), 120 * rand(0.85, 1.15), p.layer1, 0.25);
+    drawRidge(scene, cfg, i * 420 + 320 + rand(-25, 25), 210 * rand(0.9, 1.1), 90 * rand(0.85, 1.15), p.layer2, 0.45);
+  }
+
+  // fine sand-ripple texture along the near dune crest
+  for (let i = 0; i < tileCount(cfg.width, 55); i++) {
+    const rx = i * 55 + rand(-10, 10);
+    const ripple = scene.add.ellipse(rx, cfg.groundY - rand(0, 22), 42, 4, mixInto(p.layer2, 0xffffff, 0.1), 0.22);
+    ripple.setScrollFactor(0.5);
+  }
+
+  // sun-bleached rocks scattered between the cacti, so it's not cactus-or-
+  // nothing
+  for (let i = 0; i < tileCount(cfg.width, 340); i++) {
+    if (Math.random() < 0.5) continue;
+    const rx = i * 340 + rand(50, 300);
+    const rockShade = mixInto(p.layer2, 0x2a1f1c, 0.4);
+    scene.add.ellipse(rx, cfg.groundY - 8, rand(20, 36), rand(12, 18), rockShade).setScrollFactor(0.5);
+    scene.add.ellipse(rx + 9, cfg.groundY - 15, rand(10, 16), rand(8, 12), mixInto(rockShade, 0xffffff, 0.15)).setScrollFactor(0.5);
+  }
+
   for (let i = 0; i < tileCount(cfg.width, 480); i++) {
     const cx = i * 480 + 260 + rand(-40, 40);
     const cactusColor = mixInto(p.layer2, 0x3a5f3a, 0.6 + rand(-0.1, 0.1));
@@ -235,9 +398,11 @@ function drawDesert(scene, cfg, p) {
     scene.add.rectangle(cx, cfg.groundY - 26 * s, 12, 52 * s, cactusColor).setScrollFactor(0.5);
     if (Math.random() < 0.8) scene.add.rectangle(cx - 14, cfg.groundY - 36 * s, 10, 22 * s, cactusColor).setScrollFactor(0.5);
     if (Math.random() < 0.8) scene.add.rectangle(cx + 14, cfg.groundY - 30 * s, 10, 18 * s, cactusColor).setScrollFactor(0.5);
+    // a thin rim-lit edge so the cactus reads as a lit 3D form, not a flat cutout
+    scene.add.rectangle(cx - 3, cfg.groundY - 26 * s, 2, 44 * s, mixInto(cactusColor, 0xffffff, 0.3), 0.5).setScrollFactor(0.5);
   }
 
-  drawHaze(scene, cfg, p.skyHorizon, 0.4);
+  drawHaze(scene, cfg, p.skyHorizon, 0.45);
 }
 
 export const LEVEL_THEMES = [
