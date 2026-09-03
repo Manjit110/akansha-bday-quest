@@ -232,7 +232,13 @@ export default class RevealRoomScene extends Phaser.Scene {
   createTogetherVisual() {
     const f = this.friend;
     const cx = W / 2;
-    const cy = H - 108;
+    // Centered in the actual free gap between the cards above (bottom out
+    // around y=300 at most) and the "tap to continue" hint + progress dots
+    // fixed near the bottom (y=494/516) -- the old cy (H-108=432) put the
+    // frame's own bottom edge and caption past both of those, so most
+    // portrait photos visibly overlapped the hint text/dots. This sits
+    // higher, in the space that was actually free.
+    const cy = H - 170;
     const togetherKey = `together-friend-${f.id}`;
     const friendColor = Phaser.Display.Color.HexStringToColor(f.color).color;
 
@@ -241,19 +247,13 @@ export default class RevealRoomScene extends Phaser.Scene {
     if (this.textures.exists(togetherKey)) {
       // Fit the frame to the photo's own aspect ratio instead of stretching
       // every photo into one fixed landscape box -- most of these are
-      // portrait shots, and forcing them into a 172x118 landscape frame
-      // squished them noticeably. maxH stays close to the original 118 on
-      // purpose: this spot is squeezed between the cards above and the
-      // "tap to continue" hint + progress dots below, so there's very
-      // little real headroom to grow taller without the caption (drawn
-      // just below the frame) colliding with them -- confirmed by testing
-      // a taller max height, which visibly overlapped the hint text. Width
-      // is where there's actual room to vary, so most photos (portrait or
-      // landscape, since real aspect ratios here are all well under
-      // maxW/maxH) end up height-constrained and simply narrower or wider
-      // as their real proportions call for, instead of distorted.
-      const maxW = 180;
-      const maxH = 124;
+      // portrait shots, and forcing them into a fixed landscape frame
+      // squished them noticeably. Width is where there's actual room to
+      // vary, so most photos (portrait or landscape) end up height-
+      // constrained and simply narrower or wider as their real proportions
+      // call for, instead of distorted.
+      const maxW = 200;
+      const maxH = 150;
       const src = this.textures.get(togetherKey).source[0];
       const aspect = src.width / src.height;
       const frameW = aspect >= maxW / maxH ? maxW : maxH * aspect;

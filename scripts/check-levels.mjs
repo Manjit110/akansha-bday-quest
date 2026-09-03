@@ -631,9 +631,13 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
   }
 
   // A different name on the same device/browser must NOT inherit that
-  // progress -- each name is its own separate save. Uses "switch player",
-  // not a reload, since that's the actual in-app path for a shared device.
-  await page.click('#btn-switch-player');
+  // progress -- each name is its own separate save. There's no in-app way
+  // to hand off to a different name anymore (switch-player was removed),
+  // so a reload is the only path back to the name screen.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.click('#btn-start');
+  await page.waitForSelector('#screen-story-intro.active');
+  await page.click('#btn-story-intro-continue');
   await page.waitForSelector('#screen-name.active');
   await page.fill('#name-input', 'PlayerTwo');
   await page.click('#btn-name-continue');

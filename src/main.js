@@ -65,7 +65,6 @@ const nameError = document.getElementById('name-error');
 const btnNameContinue = document.getElementById('btn-name-continue');
 const mapPath = document.getElementById('map-path');
 const playerNameTag = document.getElementById('player-name-tag');
-const btnSwitchPlayer = document.getElementById('btn-switch-player');
 const bossNodeWrap = document.getElementById('boss-node-wrap');
 const heartsEl = document.getElementById('hearts');
 const bossHpEl = document.getElementById('boss-hp');
@@ -447,18 +446,6 @@ async function submitName(rawName) {
 nameForm.addEventListener('submit', (e) => {
   e.preventDefault();
   submitName(nameInput.value);
-});
-
-// Lets a shared device hand off to someone else without a full page
-// reload -- her own progress is already saved, so this just clears who's
-// "current" and asks for the next name.
-btnSwitchPlayer.addEventListener('click', () => {
-  currentName = null;
-  cheatUnlocked = false;
-  nameInput.value = '';
-  nameError.textContent = '';
-  showScreen('screen-name');
-  nameInput.focus();
 });
 
 // --- "have a code?" unlock, on the map screen ---

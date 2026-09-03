@@ -30,6 +30,7 @@ export const friends = [
       'I like that she doesn’t keep her thoughts about you to herself. If she thinks something, she’ll just say it straight up — no filter 😂',
   }),
   mkFriend(6, 'Bhumi', '#8ecae6', 'female', '/friends/bhumi-face.jpg', {
+    photoTogether: '/friends/bhumi-together.jpg',
     message:
       'You already know this, but I’m telling you again .. love you to the moon and back! ❤️ Happiest Birthday, baby! 🥰 Thank God Karu found you! I genuinely cannot imagine Canada, or my life here, without you. ♥️🤗🥰',
     firstMet:
