@@ -294,6 +294,19 @@ But no matter where life takes you, I’ll be by your side through it all. Keep 
   }),
   mkFriend(16, 'Manjit', '#ff99c8', 'male', '/friends/manjit-face.jpg', {
     photoTogether: '/friends/manjit-together.jpg',
+    message: `Happy Birthday to my favourite situational comedian, professional overthinker, and the only person I know who can have a full-blown emotional crisis over her sofa and carpet getting dirty. 😂
+
+I hope Europe is living up to your expectations… although, wait, nothing probably ever can. Your expectations are somewhere between perfection and standing next to God. 😂😂
+
+Jokes apart, I genuinely wish you a life filled with good health, happiness, success, and all the beautiful things you deserve. I’m really lucky to have you as a friend, and I hope I get to annoy you, laugh with you, and be a part of your life for many, many years to come.
+
+Stay exactly the way you are: dramatic, hilarious, particular, and absolutely impossible to replace.
+
+Happy Birthday, Akansha! 🥂`,
+    firstMet: 'I met you first at 1411 Montreal. I remember we just said hi and that’s it.',
+    firstImpression: 'She gave a full mean girl energy like “Don’t fuck with me.” 😂',
+    nowImpression: 'Mean girl energy and “Don’t fuck with me” 😂 — but caring, loving, and always standing up for me.',
+    quality: 'Her intellect and her ability to understand complex human emotions and predicaments.',
   }),
   mkFriend(2, 'Pulkit (Husband)', '#ffd166', 'male', '/friends/pulkit-face.jpg', {
     message: `Happy Birthday, my love ❤️! It has been a long time since we met yet it just feels like yesterday. We practically have spent 1/3rd of our lives together.
