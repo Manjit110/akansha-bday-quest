@@ -417,7 +417,7 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
   }
 }
 
-// The "Assemble" rally story shown once before her very first real dragon
+// The "Final Battle" rally story shown once before her very first real dragon
 // attempt (not on a replay of an already-defeated dragon -- that's the
 // separate checkBossReplay below, which goes straight to startBoss()).
 async function checkBossRallyStory(page, pageErrors) {
@@ -787,6 +787,14 @@ async function checkDragonFight(page, pageErrors) {
   );
   await page.waitForTimeout(1600); // winFight()'s fade + jail-open beat + delayed onVictory
 
+  // onVictory shows the one-time rescue pop-up first, not the finale screen
+  // directly -- click through it the way a real player would.
+  const rescueModalActive = await page.evaluate(() => document.getElementById('rescue-modal').classList.contains('active'));
+  if (rescueModalActive) {
+    await page.click('#btn-rescue-continue');
+    await page.waitForTimeout(300);
+  }
+
   const finaleActive = await page.evaluate(() => document.getElementById('screen-finale').classList.contains('active'));
   const jailOpened = await page.evaluate(() => {
     const scene = window.__testGame.scene.getScene('BossScene');
@@ -800,10 +808,12 @@ async function checkDragonFight(page, pageErrors) {
     fail(`dragon fight: NOT completable (${result.calls} volleys fired, dragonHP=${result.dragonHP} still > 0)`);
   } else if (!jailOpened) {
     fail('dragon fight: jail cell bars never opened after victory');
+  } else if (!rescueModalActive) {
+    fail('dragon fight: rescue pop-up never appeared after victory');
   } else if (!finaleActive) {
-    fail('dragon fight: finale screen never appeared after victory');
+    fail('dragon fight: finale screen never appeared after continuing past the rescue pop-up');
   } else {
-    pass(`dragon fight: fully winnable (${result.calls} volleys), jail cell opens, finale screen shown`);
+    pass(`dragon fight: fully winnable (${result.calls} volleys), jail cell opens, rescue pop-up then finale screen shown`);
   }
 }
 

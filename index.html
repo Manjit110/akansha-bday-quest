@@ -30,7 +30,7 @@
     <section id="screen-title" class="screen active">
       <div class="stars"></div>
       <h1 class="pixel-title">A Quest for<br />Akansha</h1>
-      <p class="subtitle">A dragon has taken her birthday hostage.<br />Only her friends can save it.</p>
+      <p class="subtitle">A dragon has captured Akansha and locked her away.<br />Only her friends can fight through and bring her home.</p>
       <button class="btn-primary" id="btn-start">Begin the Journey</button>
       <p class="hint">Arrow keys / WASD to move &middot; Space to jump &middot; F or 🔮 to shoot</p>
     </section>
@@ -40,10 +40,10 @@
       <div class="stars"></div>
       <h2 class="pixel-title small">The Quest Begins</h2>
       <div class="story-text">
-        <p>On the night before her birthday, a dragon swept out of the sky and locked Akansha away in a cage high above the clouds.</p>
+        <p>On the night before her birthday, a dragon swept out of the sky, captured Akansha, and locked her away in a cage high above the clouds.</p>
         <p>But she has something the dragon never counted on: every single friend who has ever loved her.</p>
-        <p>One by one, each of you must find your courage, face your own trial, and add your strength to the cause.</p>
-        <p>When everyone has gathered... only then can the dragon fall, and Akansha come home to celebrate the birthday she deserves.</p>
+        <p>One by one, each of you must fight your way through the monsters standing between you and her — defeat every enemy, and add your strength to the cause.</p>
+        <p>When every friend has broken through and reached the dragon... only then can it fall, and Akansha come home to celebrate the birthday she deserves.</p>
       </div>
       <button class="btn-primary" id="btn-story-intro-continue">Continue</button>
     </section>
@@ -70,12 +70,12 @@
     <!-- RALLY STORY, shown once before the first real dragon attempt -->
     <section id="screen-story-rally" class="screen">
       <div class="stars"></div>
-      <h2 class="pixel-title small">Assemble</h2>
+      <h2 class="pixel-title small">Final Battle</h2>
       <div class="story-text">
-        <p>Every friend has been rescued. Every memory gathered.</p>
-        <p>The dragon's cage looms ahead, with Akansha locked inside.</p>
-        <p>This is it — no more waiting.</p>
-        <p class="story-rally-line">Alright, backchods — let's assemble and save Akansha, so we can finally celebrate her birthday like she deserves! 🐉🎂</p>
+        <p>You've fought through every monster. You've made it to the dragon.</p>
+        <p>Akansha is waiting. One final battle remains.</p>
+        <p class="story-rally-line">⚔️ Final Battle: Defeat the Dragon &amp; Rescue Akansha 🐉</p>
+        <p class="story-rally-line">Alright, backchods — let's assemble and bring her home, so we can finally celebrate her birthday like she deserves! 🎂</p>
       </div>
       <button class="btn-primary" id="btn-story-rally-continue">Face the Dragon</button>
     </section>
@@ -86,7 +86,7 @@
         Playing as <strong id="player-name-tag"></strong>
       </p>
       <h2 class="pixel-title small">The Journey</h2>
-      <p class="subtitle small">Rescue every friend, then face the dragon.</p>
+      <p class="subtitle small">Fight through every monster. Defeat every enemy. Reach the dragon. Rescue Akansha.</p>
       <div id="map-path"></div>
       <div id="boss-node-wrap"></div>
       <div id="code-entry">
@@ -115,12 +115,12 @@
     <section id="screen-finale" class="screen">
       <div id="confetti-layer"></div>
       <h1 class="pixel-title">Happy Birthday<br />Akansha!</h1>
-      <p class="subtitle">Every friend you rescued came together to say...</p>
+      <p class="subtitle">Every friend who fought their way here came together to say...</p>
       <div id="finale-grid"></div>
       <p id="finale-note" class="finale-note"></p>
     </section>
 
-    <!-- REPLAY-OR-VIEW CHOICE, shown when clicking an already-rescued friend -->
+    <!-- REPLAY-OR-VIEW CHOICE, shown when clicking an already-completed friend -->
     <div id="replay-modal" class="modal-backdrop">
       <div class="modal-card">
         <button class="modal-close" id="btn-replay-close" aria-label="Close">&times;</button>
@@ -128,6 +128,24 @@
         <h3 id="replay-modal-name" class="modal-name"></h3>
         <button class="btn-primary" id="btn-replay-level">Play Level Again</button>
         <button class="btn-small" id="btn-view-messages">View Messages</button>
+      </div>
+    </div>
+
+    <!-- RESCUE POP-UP, shown once immediately after the dragon falls -->
+    <div id="rescue-modal" class="modal-backdrop">
+      <div class="modal-card rescue-modal-card">
+        <h3 class="rescue-modal-title">🎉 Akansha Has Been Rescued! 🎉</h3>
+        <div class="rescue-modal-body">
+          <p><strong>Akansha, we did it. ❤️</strong></p>
+          <p>We sacrificed our sweat, blood, sanity, and probably several brain cells to save you. 😂</p>
+          <p>We fought through monsters.<br />We battled our way through the kingdom.<br />And finally… we defeated the dragon. 🐉⚔️</p>
+          <p><strong>All of this… just for you. ❤️</strong></p>
+          <p>Because we love you.<br />We care about you.<br />And, unfortunately for you, <strong>you're stuck with us forever.</strong> 😂❤️</p>
+          <p><strong>Stay in our lives forever.</strong></p>
+          <p><strong>Happy Birthday, Akansha! 🎂🥂❤️</strong></p>
+          <p class="rescue-modal-signature">— Your slightly insane but extremely loyal friends</p>
+        </div>
+        <button class="btn-primary" id="btn-rescue-continue">Continue</button>
       </div>
     </div>
 

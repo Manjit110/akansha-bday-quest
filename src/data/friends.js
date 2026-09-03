@@ -342,6 +342,21 @@ function mkFriend(id, name, color, gender, photoSolo = null, extra = {}) {
   };
 }
 
-// Shown on the finale screen once the dragon is beaten.
-export const finaleNote =
-  "TODO: one last message from everyone, all together — to Akansha, from all of us. Happy birthday!";
+// Shown on the finale screen once the dragon is beaten -- also what a
+// revisit of the already-defeated dragon shows (see "View Messages" in the
+// replay modal), since that path skips the one-time rescue pop-up in main.js.
+export const finaleNote = `Akansha, we did it. ❤️
+
+We sacrificed our sweat, blood, sanity, and probably several brain cells to save you. 😂
+
+We fought through monsters. We battled our way through the kingdom. And finally… we defeated the dragon. 🐉⚔️
+
+All of this… just for you. ❤️
+
+Because we love you. We care about you. And, unfortunately for you, you're stuck with us forever. 😂❤️
+
+Stay in our lives forever.
+
+Happy Birthday, Akansha! 🎂🥂❤️
+
+— Your slightly insane but extremely loyal friends`;

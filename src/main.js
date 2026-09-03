@@ -79,6 +79,8 @@ const replayModalName = document.getElementById('replay-modal-name');
 const btnReplayLevel = document.getElementById('btn-replay-level');
 const btnViewMessages = document.getElementById('btn-view-messages');
 const btnReplayClose = document.getElementById('btn-replay-close');
+const rescueModal = document.getElementById('rescue-modal');
+const btnRescueContinue = document.getElementById('btn-rescue-continue');
 const btnCodeToggle = document.getElementById('btn-code-toggle');
 const codeForm = document.getElementById('code-form');
 const codeInput = document.getElementById('code-input');
@@ -169,7 +171,7 @@ function renderMap() {
   if (!allUnlocked) {
     bossNode.classList.add('locked');
     bossNode.textContent = '🐉';
-    bossNode.title = 'Rescue every friend first';
+    bossNode.title = 'Defeat every monster first';
   } else if (state.bossDefeated) {
     bossNode.textContent = '🎉';
     bossNode.title = 'Relive the celebration';
@@ -182,7 +184,7 @@ function renderMap() {
   bossNodeWrap.appendChild(bossNode);
 }
 
-// --- replay-or-view modal, shown when clicking an already-rescued friend
+// --- replay-or-view modal, shown when clicking an already-completed friend
 // or the already-defeated dragon ---
 let replayIndex = null;
 
@@ -312,7 +314,7 @@ function startLevel(index) {
   });
 }
 
-// Revisiting an already-rescued friend from the map replays just the
+// Revisiting an already-completed friend from the map replays just the
 // memory room (photo + messages), skipping the level itself.
 function revisitFriend(index) {
   stopSound('clear');
@@ -353,7 +355,7 @@ function startBoss() {
         state.bossDefeated = true;
         persistProgress();
         game.scene.stop('BossScene');
-        showFinale();
+        showRescueModal();
       },
     },
   });
@@ -416,6 +418,24 @@ function showFinale() {
   showScreen('screen-finale');
   launchConfetti();
 }
+
+// A one-time celebration shown the moment the dragon actually falls, before
+// the finale screen's grid of everyone's messages -- a revisit of an
+// already-defeated dragon ("View Messages" in the replay modal) skips
+// straight to showFinale() instead, since the rescue already happened.
+function showRescueModal() {
+  rescueModal.classList.add('active');
+}
+
+function closeRescueModal() {
+  rescueModal.classList.remove('active');
+  showFinale();
+}
+
+btnRescueContinue.addEventListener('click', closeRescueModal);
+rescueModal.addEventListener('click', (e) => {
+  if (e.target === rescueModal) closeRescueModal();
+});
 
 // --- name entry ---
 // Loading progress is async (Supabase, when configured), so the button
