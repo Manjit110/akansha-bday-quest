@@ -16,6 +16,14 @@ import { friends } from '../src/data/friends.js';
 const PORT = 5299;
 const BASE_URL = `http://localhost:${PORT}/akansha-bday-quest/`;
 const TOTAL_LEVELS = friends.length;
+// Every test player name gets this appended. Once Supabase is configured
+// (src/data/supabaseConfig.js), loadProgress() prefers whatever's already
+// in the remote table over a freshly-seeded local value for that exact
+// name -- so a fixed name like "PlayerOne" silently inherits leftover
+// progress from the *previous* test run instead of starting clean.
+// Unique per run sidesteps that without needing delete access to the
+// table (the anon key deliberately doesn't have it -- see README).
+const RUN_ID = Date.now().toString(36);
 
 const MAX_JUMP_HEIGHT = 112; // vy=560, gravity=1400 -> vy^2/(2g)
 const SAFE_MAX_HORIZONTAL = 140; // conservative single-jump horizontal reach
@@ -206,7 +214,7 @@ async function checkLevelTransition(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await enterAsPlayer(page, 'TestTransition');
+  await enterAsPlayer(page, `TestTransition-${RUN_ID}`);
   await page.waitForSelector('.map-node.current');
   await page.click('.map-node.current');
   await page.waitForSelector('#game-container canvas');
@@ -361,7 +369,7 @@ async function checkRevisitAfterCompletion(page, pageErrors) {
 
   const before = pageErrors.length;
 
-  const name = 'TestRevisit';
+  const name = `TestRevisit-${RUN_ID}`;
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(
     ({ key, total }) => {
@@ -424,7 +432,7 @@ async function checkBossRallyStory(page, pageErrors) {
   console.log('\n== Rally story before the first dragon attempt ==');
 
   const before = pageErrors.length;
-  const name = 'TestRally';
+  const name = `TestRally-${RUN_ID}`;
 
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(
@@ -473,7 +481,7 @@ async function checkBossReplay(page, pageErrors) {
   console.log('\n== Revisiting the already-defeated dragon (Play Again / View Messages) ==');
 
   const before = pageErrors.length;
-  const name = 'TestBossReplay';
+  const name = `TestBossReplay-${RUN_ID}`;
 
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(
@@ -530,6 +538,8 @@ async function checkNameEntryAndLevelLocking(page, pageErrors) {
   console.log('\n== Name entry (per-name progress), no level-skipping ==');
 
   const before = pageErrors.length;
+  const playerOneName = `PlayerOne-${RUN_ID}`;
+  const playerTwoName = `PlayerTwo-${RUN_ID}`;
 
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
@@ -549,7 +559,7 @@ async function checkNameEntryAndLevelLocking(page, pageErrors) {
   if (!emptyNameBlocked) fail('name entry: submitting an empty name did not show an error / was not blocked');
   else pass('name entry: empty name is rejected');
 
-  await page.fill('#name-input', 'PlayerOne');
+  await page.fill('#name-input', playerOneName);
   await page.click('#btn-name-continue');
   await page.waitForSelector('.map-node.current');
   const freshDoneCount1 = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
@@ -607,10 +617,10 @@ async function checkNameEntryAndLevelLocking(page, pageErrors) {
   }
   await page.waitForSelector('.map-node.done', { timeout: 5000 });
 
-  const savedRaw = await page.evaluate((key) => localStorage.getItem(key), progressKey('PlayerOne'));
+  const savedRaw = await page.evaluate((key) => localStorage.getItem(key), progressKey(playerOneName));
   const saved = savedRaw ? JSON.parse(savedRaw) : null;
   if (freshDoneCount1 !== 0 || !saved || saved.unlocked !== 1) {
-    fail(`name entry: progress not saved correctly under 'PlayerOne' (started with ${freshDoneCount1} done, saved=${savedRaw})`);
+    fail(`name entry: progress not saved correctly under '${playerOneName}' (started with ${freshDoneCount1} done, saved=${savedRaw})`);
   } else {
     pass("name entry: finishing a level saves progress under that exact name");
   }
@@ -622,10 +632,10 @@ async function checkNameEntryAndLevelLocking(page, pageErrors) {
   await page.click('#btn-story-intro-continue');
   await page.waitForSelector('#screen-name.active');
   const prefill = await page.evaluate(() => document.getElementById('name-input').value);
-  await page.click('#btn-name-continue'); // prefilled value should already be 'PlayerOne'
+  await page.click('#btn-name-continue'); // prefilled value should already be playerOneName
   await page.waitForSelector('.map-node.done, .map-node.current');
   const doneAfterReturn = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
-  if (prefill !== 'PlayerOne' || doneAfterReturn !== 1) {
+  if (prefill !== playerOneName || doneAfterReturn !== 1) {
     fail(`name entry: returning as the same name didn't restore progress (prefill="${prefill}", done=${doneAfterReturn})`);
   } else {
     pass('name entry: returning as the same name restores her saved progress');
@@ -640,7 +650,7 @@ async function checkNameEntryAndLevelLocking(page, pageErrors) {
   await page.waitForSelector('#screen-story-intro.active');
   await page.click('#btn-story-intro-continue');
   await page.waitForSelector('#screen-name.active');
-  await page.fill('#name-input', 'PlayerTwo');
+  await page.fill('#name-input', playerTwoName);
   await page.click('#btn-name-continue');
   await page.waitForSelector('.map-node.current');
   const doneForNewName = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
@@ -797,7 +807,7 @@ async function checkBossFightsAndCompletion(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await enterAsPlayer(page, 'TestMiniBosses');
+  await enterAsPlayer(page, `TestMiniBosses-${RUN_ID}`);
   await page.waitForSelector('.map-node.current');
   await page.click('.map-node.current');
   await page.waitForSelector('#game-container canvas');

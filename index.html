@@ -12,18 +12,6 @@
 </head>
 <body>
 
-  <!-- Shown instead of everything else on phones/tablets -- this is a
-       keyboard-driven platformer with no touch controls for movement, so
-       playing on a touch device would just be broken rather than merely
-       cramped. See the isMobileOrTablet() check in main.js. -->
-  <div id="device-block" class="device-block">
-    <div class="stars"></div>
-    <div class="device-block-icon">🖥️</div>
-    <h1 class="pixel-title small">A Quest for<br />Akansha</h1>
-    <p class="device-block-message">This little adventure needs a real keyboard to run, jump, and fight with.</p>
-    <p class="device-block-sub">Please open this link on a <strong>laptop or desktop computer</strong> instead 💛</p>
-  </div>
-
   <div id="app">
 
     <!-- TITLE SCREEN -->
@@ -32,7 +20,7 @@
       <h1 class="pixel-title">A Quest for<br />Akansha</h1>
       <p class="subtitle">A dragon has captured Akansha and locked her away.<br />Only her friends can fight through and bring her home.</p>
       <button class="btn-primary" id="btn-start">Begin the Journey</button>
-      <p class="hint">Arrow keys / WASD to move &middot; Space to jump &middot; F or 🔮 to shoot</p>
+      <p class="hint">Arrow keys / WASD or the on-screen buttons to move &middot; Space or ▲ to jump &middot; F or 🔮 to shoot</p>
     </section>
 
     <!-- QUEST INTRO STORY, shown once before naming yourself -->
@@ -94,8 +82,19 @@
         <div id="boss-hp"></div>
         <div id="hearts"></div>
       </div>
-      <div id="game-container"></div>
-      <button id="btn-shoot" class="btn-shoot" aria-label="Shoot">🔮</button>
+      <div id="game-container">
+        <!-- Anchored to the canvas's own box (see #game-container's
+             position:relative), not the viewport -- on a narrow phone the
+             960x540 canvas letterboxes down to a short strip, and pinning
+             these to the screen's bottom edge instead left them stranded
+             far below it, with a dead gap in between. -->
+        <div id="touch-move" class="touch-move">
+          <button id="btn-move-left" class="btn-dpad" aria-label="Move left">◀</button>
+          <button id="btn-move-right" class="btn-dpad" aria-label="Move right">▶</button>
+        </div>
+        <button id="btn-jump" class="btn-jump" aria-label="Jump">▲</button>
+        <button id="btn-shoot" class="btn-shoot" aria-label="Shoot">🔮</button>
+      </div>
     </section>
 
     <!-- FINALE SCREEN -->

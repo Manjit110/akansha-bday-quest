@@ -172,6 +172,13 @@ export default class LevelScene extends Phaser.Scene {
     // --- input ---
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,SPACE,F');
+    // On-screen d-pad/jump state (see main.js's bindHold) -- held like a
+    // real key rather than a one-shot flag like shootRequested below,
+    // since movement/jump need to know whether the button is *currently*
+    // down, not just that it was pressed once.
+    this.touchLeft = false;
+    this.touchRight = false;
+    this.touchJump = false;
 
     this.callbacks.onHeartsChange(this.hearts);
 
@@ -388,6 +395,18 @@ export default class LevelScene extends Phaser.Scene {
     this.shootRequested = true;
   }
 
+  // Called by the on-screen d-pad/jump buttons (see main.js's bindHold),
+  // alongside the arrow keys/WASD/Space -- update() below just ORs these
+  // into the same checks, so keyboard and touch both work at once.
+  setTouchMove(direction, active) {
+    if (direction === 'left') this.touchLeft = active;
+    else if (direction === 'right') this.touchRight = active;
+  }
+
+  setTouchJump(active) {
+    this.touchJump = active;
+  }
+
   shoot() {
     const dir = this.player.flipX ? -1 : 1;
     const color = Phaser.Display.Color.HexStringToColor(this.friend.color).color;
@@ -548,9 +567,9 @@ export default class LevelScene extends Phaser.Scene {
     const { cursors, keys, player } = this;
 
     if (!this.inputLocked) {
-      const left = cursors.left.isDown || keys.A.isDown;
-      const right = cursors.right.isDown || keys.D.isDown;
-      const jumpKey = cursors.up.isDown || keys.W.isDown || keys.SPACE.isDown;
+      const left = cursors.left.isDown || keys.A.isDown || this.touchLeft;
+      const right = cursors.right.isDown || keys.D.isDown || this.touchRight;
+      const jumpKey = cursors.up.isDown || keys.W.isDown || keys.SPACE.isDown || this.touchJump;
 
       if (left) player.body.setVelocityX(-200);
       else if (right) player.body.setVelocityX(200);

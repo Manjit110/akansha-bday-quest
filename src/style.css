@@ -370,7 +370,12 @@ html, body {
 .boss-node.locked { opacity: 0.35; cursor: not-allowed; filter: grayscale(1); }
 
 /* --- game screen --- */
-#screen-game { padding: 0; justify-content: flex-start; }
+/* A landscape (16:9) canvas on a narrow portrait phone is inherently
+   short -- width is always the binding dimension, no CSS trick changes
+   that without rotating to landscape. Centering vertically instead of
+   pinning to the top at least reads as a deliberate layout rather than
+   "broken, stuck at the top with dead space below". */
+#screen-game { padding: 0; justify-content: center; }
 
 #game-hud {
   position: relative;
@@ -411,6 +416,7 @@ html, body {
 }
 
 #game-container {
+  position: relative;
   width: 100%;
   max-width: 960px;
   aspect-ratio: 16 / 9;
@@ -422,7 +428,7 @@ html, body {
 
 .btn-shoot {
   position: absolute;
-  right: max(24px, calc(50% - 460px));
+  right: 24px;
   bottom: 28px;
   width: 64px;
   height: 64px;
@@ -435,8 +441,62 @@ html, body {
   box-shadow: 0 6px 14px rgba(0,0,0,0.35);
   touch-action: manipulation;
   user-select: none;
+  /* A landscape canvas on a portrait phone is short enough that these
+     controls sit right over the ground/action, not off in empty margin
+     below it -- kept translucent so what's happening underneath still
+     reads through, and brought to full opacity while actually pressed. */
+  opacity: 0.72;
 }
-.btn-shoot:active { transform: scale(0.92); }
+.btn-shoot:active { transform: scale(0.92); opacity: 1; }
+
+/* --- on-screen movement/jump controls -- left thumb runs the d-pad, right
+   thumb handles jump + shoot, mirroring the keyboard's own left-hand/
+   right-hand split (WASD+F). Visible on every device, not just touch ones
+   (same as .btn-shoot always was) -- a mouse click works on them too, so
+   there's no device-sniffing to get wrong. */
+.touch-move {
+  position: absolute;
+  left: 24px;
+  bottom: 28px;
+  display: flex;
+  gap: 14px;
+}
+
+.btn-dpad {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.5);
+  background: radial-gradient(circle at 35% 30%, var(--accent-teal), #3a8fae);
+  color: #10222b;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  touch-action: manipulation;
+  user-select: none;
+  opacity: 0.72;
+}
+.btn-dpad:active { transform: scale(0.92); opacity: 1; }
+
+.btn-jump {
+  position: absolute;
+  right: 104px;
+  bottom: 28px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.5);
+  background: radial-gradient(circle at 35% 30%, var(--accent-teal), #3a8fae);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  touch-action: manipulation;
+  user-select: none;
+  opacity: 0.72;
+}
+.btn-jump:active { transform: scale(0.92); opacity: 1; }
 
 /* --- finale screen --- */
 #finale-grid {
@@ -480,54 +540,3 @@ html, body {
   .map-node { width: 60px; height: 60px; font-size: 18px; }
 }
 
-/* --- phone/tablet block screen --- */
-.device-block {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 32px 24px;
-  text-align: center;
-  background: radial-gradient(ellipse at top, var(--bg-mid), var(--bg-deep) 70%);
-}
-.device-block.visible { display: flex; }
-
-.device-block-icon {
-  font-size: 56px;
-  margin-bottom: 6px;
-  filter: drop-shadow(0 0 18px rgba(255, 209, 102, 0.5));
-  animation: device-block-float 3.2s ease-in-out infinite;
-}
-@keyframes device-block-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.device-block-message {
-  max-width: 380px;
-  margin: 10px 0 0;
-  color: var(--text-light);
-  font-weight: 700;
-  font-size: 18px;
-  line-height: 1.5;
-}
-
-.device-block-sub {
-  max-width: 380px;
-  margin: 14px 0 0;
-  padding: 14px 22px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 2px solid rgba(255, 209, 102, 0.35);
-  color: var(--text-dim);
-  font-weight: 600;
-  font-size: 15px;
-  line-height: 1.5;
-}
-.device-block-sub strong {
-  color: var(--accent-gold);
-}
