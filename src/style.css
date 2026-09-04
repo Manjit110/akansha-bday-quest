@@ -23,10 +23,23 @@ html, body {
   overflow: hidden;
 }
 
+/* height: 100vh historically reports the *largest* possible viewport on
+   real mobile browsers (address bar hidden), even while the address bar
+   is actually showing and eating into the real visible area -- so a
+   fixed-position footer (like the reveal screen's Continue button, sized
+   to sit at the very bottom of this box) can end up positioned below
+   what's actually visible, with no way to scroll to it (html/body has
+   overflow: hidden). 100svh is the "small viewport" value -- guaranteed
+   to fit even with browser chrome shown -- so anything sized against
+   #app's height is guaranteed to stay within the real visible area. This
+   is exactly what Playwright's mobile *emulation* can't catch: it
+   reports a fixed viewport size with no address-bar-driven vh/svh gap to
+   begin with, so this only ever showed up on a real phone. */
 #app {
   position: relative;
   width: 100%;
   height: 100vh;
+  height: 100svh;
 }
 
 /* --- mobile access-code gate (see mobileGate.js) --- */
@@ -753,24 +766,30 @@ html, body {
      100% of the viewport and nothing below the fold is ever needed. The
      reserved budget below (HUD + controls + margins, shrunk to match)
      must stay in sync with the actual HUD/controls rules just below it. */
-  #game-hud { padding: 4px 12px; }
+  #game-hud { padding: 2px 12px; }
   #hearts, #boss-hp { font-size: 15px; gap: 3px; }
   #level-title { font-size: 11px; }
+  /* The "<- Map" button, not the d-pad/jump/shoot controls -- it was the
+     tallest thing in the HUD row (its own padding/border, bigger than
+     the hearts/level-title text next to it) and was quietly capping how
+     much height #game-container's budget below could reclaim for the
+     canvas. Shrinking it (not the play controls, which stay exactly the
+     54/60px size set above) buys back real canvas height for free. */
+  #btn-quit-level { padding: 4px 10px; font-size: 11px; border-width: 1.5px; }
 
   #game-container {
     width: auto;
     max-width: 100%;
-    height: calc(100vh - 130px);
-    height: calc(100svh - 130px);
-    margin: 2px auto 0;
+    height: calc(100vh - 100px);
+    height: calc(100svh - 100px);
+    margin: 1px auto 0;
   }
 
-  /* Sized up from an earlier, more cautious pass (40/44px) -- too small
-     to comfortably tap in practice. Bigger than #game-container's budget
-     above accounts for on its own would need trimming the canvas further
-     to compensate, which is the right trade: an easy-to-hit control beats
-     a slightly taller play area. */
-  #game-controls { margin: 4px auto 0; padding: 0 10px; }
+  /* d-pad/jump/shoot are deliberately left at the 54/60px size set above
+     -- comfortable to tap, and not touched by this pass, which only
+     reclaims canvas height from the HUD/margins around them (see
+     #btn-quit-level and #game-hud above). */
+  #game-controls { margin: 2px auto 0; padding: 0 10px; }
   .touch-move, .touch-action { gap: 10px; }
   .btn-dpad, .btn-jump {
     width: 54px;
