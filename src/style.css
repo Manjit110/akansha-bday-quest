@@ -370,12 +370,15 @@ html, body {
 .boss-node.locked { opacity: 0.35; cursor: not-allowed; filter: grayscale(1); }
 
 /* --- game screen --- */
-/* A landscape (16:9) canvas on a narrow portrait phone is inherently
-   short -- width is always the binding dimension, no CSS trick changes
-   that without rotating to landscape. Centering vertically instead of
-   pinning to the top at least reads as a deliberate layout rather than
-   "broken, stuck at the top with dead space below". */
-#screen-game { padding: 0; justify-content: center; }
+/* Pinned to the top rather than vertically centered -- centering pushed
+   the whole HUD+canvas+controls group down toward the middle of the
+   screen, and on a real phone (browser address-bar chrome eats into the
+   actual usable height in a way desktop/emulated-viewport testing
+   doesn't capture) that left too little guaranteed room below the canvas
+   for #game-controls, especially in landscape. Pinning to the top means
+   the controls always render directly under the canvas with the same
+   safe margin, regardless of how much (or little) space is left below. */
+#screen-game { padding: 0; justify-content: flex-start; }
 
 #game-hud {
   position: relative;
