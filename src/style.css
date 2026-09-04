@@ -587,3 +587,24 @@ html, body {
   .map-node { width: 60px; height: 60px; font-size: 18px; }
 }
 
+/* --- short landscape viewports (real phones in landscape, ~330-430px
+   tall) -- .screen's content (title + text + button) can be taller than
+   this, and unlike #game-screen there's no reason to ever need the space
+   below the fold: unlike a desktop/tablet window, a phone's viewport
+   height in landscape never has this much unused room to spare, so the
+   scroll affordance on .screen alone isn't discoverable enough and the
+   Continue/etc button ends up looking like it's missing entirely. Scoped
+   to max-height so nothing here ever fires on desktop (routinely 700px+
+   tall) or a tablet -- only genuinely short viewports, landscape phones
+   being the only real-world case since portrait is already blocked by
+   .rotate-block above. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .screen { padding: 10px 20px; }
+  .pixel-title { font-size: clamp(16px, 4vw, 26px); margin-bottom: 8px; }
+  .pixel-title.small { font-size: clamp(13px, 3.2vw, 18px); margin-bottom: 6px; }
+  .subtitle { margin-bottom: 14px; }
+  .story-text { gap: 6px; margin-bottom: 12px; }
+  .story-text p { font-size: 13px; line-height: 1.32; }
+  .btn-primary { padding: 10px 26px; font-size: 15px; }
+}
+
