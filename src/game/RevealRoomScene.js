@@ -435,15 +435,28 @@ export default class RevealRoomScene extends Phaser.Scene {
     const borderColor = mixColors(0xd9c39c, color, 0.35);
 
     if (card.type === 'photo') {
-      const size = 176;
+      const size = 200;
       const frame = this.paperCard(size, size, paperColor, borderColor, 10);
       const border = this.addFloralBorder(size, size);
       const inner = this.add.rectangle(0, -6, size - 24, size - 24, 0x1a1035);
       let photo;
       const parts = [frame, ...border, inner];
       if (card.photoKey && this.textures.exists(card.photoKey)) {
+        // setDisplaySize alone stretches width/height independently, forcing
+        // every photo into an exact square regardless of its real
+        // proportions -- visibly squashing or stretching anyone whose face
+        // photo wasn't already square. Crop to a centered square from the
+        // source first (in source-pixel space, via setCrop), *then*
+        // setDisplaySize -- since the cropped region is already square, that
+        // final scale is uniform on both axes, so nothing distorts. Same
+        // "fill the frame, crop the overflow" look the map avatars already
+        // get from CSS object-fit: cover.
+        const photoSize = size - 32;
         photo = this.add.image(0, -6, card.photoKey);
-        photo.setDisplaySize(size - 32, size - 32);
+        const src = this.textures.get(card.photoKey).source[0];
+        const cropSize = Math.min(src.width, src.height);
+        photo.setCrop((src.width - cropSize) / 2, (src.height - cropSize) / 2, cropSize, cropSize);
+        photo.setDisplaySize(photoSize, photoSize);
         parts.push(photo);
       } else {
         photo = this.add.rectangle(0, -6, size - 32, size - 32, color);

@@ -19,6 +19,14 @@
 export const friends = [
   mkFriend(1, 'Arpit', '#ff8fab', 'male', '/friends/arpit-face.jpg', {
     photoTogether: '/friends/arpit-together.jpg',
+    message: `Happy Birthday Akanshaaa! 🥳❤️
+The girl with the biggest heart, the best chai ☕😂, and the only person who will always say yes to drinks! 🍻😂
+Always the life of the party — stay exactly the crazy, sweet person you are! ❤️🥂`,
+    firstMet: 'Diljit concert.',
+    firstImpression: 'Girl knows how to vibe! 😂 And then you went and stole a balloon from a baby… ruthless behaviour 😭😂',
+    nowImpression:
+      'My impression now is slightly different though — beneath all those cool, sexy-girl vibes is actually the sweetest person with the biggest heart, who always tries to do something special for her friends. ❤️ Plus, I know now she is super terrified of treadmills. 😂',
+    quality: 'Her big heart and the effort she puts into making her friends feel special. ❤️',
   }),
   mkFriend(5, 'Karan', '#ff9770', 'male', '/friends/karan-face.jpg', {
     photoTogether: '/friends/karan-together.jpg',

@@ -523,10 +523,11 @@ async function checkBossReplay(page, pageErrors) {
 }
 
 // Name entry (progressStore.js) gates the map now, keyed per-name so
-// several people can share one link/device and keep separate progress,
-// plus the in-game "Akansha" code that opens any level without earning it.
-async function checkNameEntryAndCheatCode(page, pageErrors) {
-  console.log('\n== Name entry (per-name progress) and the "Akansha" unlock code ==');
+// several people can share one link/device and keep separate progress.
+// There's no way to skip ahead -- the old "have a code?" unlock was removed
+// so every level has to be played in order.
+async function checkNameEntryAndLevelLocking(page, pageErrors) {
+  console.log('\n== Name entry (per-name progress), no level-skipping ==');
 
   const before = pageErrors.length;
 
@@ -643,51 +644,24 @@ async function checkNameEntryAndCheatCode(page, pageErrors) {
   await page.click('#btn-name-continue');
   await page.waitForSelector('.map-node.current');
   const doneForNewName = await page.evaluate(() => document.querySelectorAll('.map-node.done').length);
-  if (doneForNewName !== 0) {
-    fail(`name entry: a brand-new name inherited someone else's progress (${doneForNewName} done nodes)`);
-  } else {
-    pass('name entry: a different name gets its own fresh progress, not shared');
-  }
 
-  // The "Akansha" code should open every level without having earned it,
-  // and a wrong code should be rejected.
-  await page.click('#btn-code-toggle');
-  await page.waitForSelector('#code-form:not(.hidden)');
-  await page.fill('#code-input', 'not-it');
-  await page.click('#btn-code-submit');
-  await page.waitForTimeout(150);
-  const wrongCodeRejected = await page.evaluate(() => document.getElementById('code-error').textContent.length > 0);
-
-  await page.fill('#code-input', 'Akansha');
-  await page.click('#btn-code-submit');
-  await page.waitForTimeout(200);
-  const stillLocked = await page.evaluate(() => document.querySelectorAll('.map-node.locked').length);
-  const cheatOpenCount = await page.evaluate(() => document.querySelectorAll('.map-node.cheat-open').length);
-
-  if (!wrongCodeRejected || stillLocked !== 0 || cheatOpenCount !== TOTAL_LEVELS - 1) {
-    fail(
-      `cheat code: wrong code rejected=${wrongCodeRejected}, locked left=${stillLocked}, cheat-open=${cheatOpenCount}/${TOTAL_LEVELS - 1}`
-    );
-  } else {
-    pass(`cheat code: wrong code rejected, "Akansha" opens all ${TOTAL_LEVELS - 1} not-yet-earned levels`);
-  }
-
-  // And a cheat-opened node must actually start that level, not just look clickable.
-  await page.evaluate(() => document.querySelector('.map-node.cheat-open').click());
-  await page.waitForSelector('#game-container canvas');
-  await page.waitForTimeout(500);
-  const cheatLevelActive = await page.evaluate(() => {
-    const scene = window.__testGame.scene.getScene('LevelScene');
-    return !!(scene && scene.scene.isActive());
-  });
+  // Levels beyond the one she's currently on should have no way to be
+  // opened early -- the old "have a code?" skip was removed so everyone
+  // plays through every level in order.
+  const lockedCount = await page.evaluate(() => document.querySelectorAll('.map-node.locked').length);
+  const noCodeEntry = await page.evaluate(() => !document.getElementById('code-entry'));
 
   const newErrors = pageErrors.splice(before);
   if (newErrors.length) {
-    newErrors.forEach((e) => fail(`name/cheat code: console error: ${e}`));
-  } else if (!cheatLevelActive) {
-    fail('cheat code: clicking a cheat-opened node never actually started the level');
+    newErrors.forEach((e) => fail(`name entry: console error: ${e}`));
+  } else if (doneForNewName !== 0) {
+    fail(`name entry: a brand-new name inherited someone else's progress (${doneForNewName} done nodes)`);
+  } else if (lockedCount !== TOTAL_LEVELS - 1) {
+    fail(`name entry: expected ${TOTAL_LEVELS - 1} locked levels ahead of the current one, found ${lockedCount}`);
+  } else if (!noCodeEntry) {
+    fail('name entry: the removed "have a code?" skip is still present on the map screen');
   } else {
-    pass('cheat code: a cheat-opened node actually starts its level');
+    pass('name entry: a different name gets its own fresh progress, and every level ahead stays locked with no skip option');
   }
 }
 
@@ -917,7 +891,7 @@ async function main() {
 
     await checkLevelTransition(page);
     await checkRevisitAfterCompletion(page, pageErrors);
-    await checkNameEntryAndCheatCode(page, pageErrors);
+    await checkNameEntryAndLevelLocking(page, pageErrors);
     await checkDragonFight(page, pageErrors);
     await checkBossRallyStory(page, pageErrors);
     await checkBossReplay(page, pageErrors);

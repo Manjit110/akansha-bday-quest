@@ -9,7 +9,6 @@ import BossScene, { DRAGON_HP } from './game/BossScene.js';
 import RevealRoomScene from './game/RevealRoomScene.js';
 
 const LAST_NAME_KEY = 'akansha-quest-player-name';
-const UNLOCK_CODE = 'akansha';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];
 
 // Movement is keyboard-only (arrow keys/WASD) with no on-screen d-pad, so a
@@ -48,10 +47,6 @@ if (document.fonts) {
 // level was opened via the ?level= preview cheat code).
 let state = { unlocked: 0, bossDefeated: false };
 let currentName = null;
-// "Have a code?" on the map screen -- lets her open any level without
-// having earned it yet, session-only (not saved). Independent of the
-// ?level= URL cheat code below, which is a raw preview shortcut.
-let cheatUnlocked = false;
 
 // --- DOM refs ---
 const screens = document.querySelectorAll('.screen');
@@ -81,10 +76,6 @@ const btnViewMessages = document.getElementById('btn-view-messages');
 const btnReplayClose = document.getElementById('btn-replay-close');
 const rescueModal = document.getElementById('rescue-modal');
 const btnRescueContinue = document.getElementById('btn-rescue-continue');
-const btnCodeToggle = document.getElementById('btn-code-toggle');
-const codeForm = document.getElementById('code-form');
-const codeInput = document.getElementById('code-input');
-const codeError = document.getElementById('code-error');
 
 function showScreen(id) {
   screens.forEach((s) => s.classList.toggle('active', s.id === id));
@@ -152,11 +143,6 @@ function renderMap() {
       node.textContent = String(i + 1);
       node.title = `Play ${friend.name}'s level`;
       node.addEventListener('click', () => startLevel(i));
-    } else if (cheatUnlocked) {
-      node.classList.add('cheat-open');
-      node.textContent = String(i + 1);
-      node.title = `Play ${friend.name}'s level`;
-      node.addEventListener('click', () => startLevel(i));
     } else {
       node.classList.add('locked');
       node.textContent = '🔒';
@@ -167,7 +153,7 @@ function renderMap() {
   bossNodeWrap.innerHTML = '';
   const bossNode = document.createElement('div');
   bossNode.className = 'boss-node';
-  const allUnlocked = state.unlocked >= friends.length || cheatUnlocked;
+  const allUnlocked = state.unlocked >= friends.length;
   if (!allUnlocked) {
     bossNode.classList.add('locked');
     bossNode.textContent = '🐉';
@@ -466,26 +452,6 @@ async function submitName(rawName) {
 nameForm.addEventListener('submit', (e) => {
   e.preventDefault();
   submitName(nameInput.value);
-});
-
-// --- "have a code?" unlock, on the map screen ---
-btnCodeToggle.addEventListener('click', () => {
-  codeForm.classList.toggle('hidden');
-  if (!codeForm.classList.contains('hidden')) codeInput.focus();
-});
-
-codeForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  if (codeInput.value.trim().toLowerCase() === UNLOCK_CODE) {
-    cheatUnlocked = true;
-    codeError.textContent = '';
-    codeInput.value = '';
-    codeForm.classList.add('hidden');
-    renderMap();
-  } else {
-    playSound('hit', { volume: 0.4 });
-    codeError.textContent = "That code isn't right.";
-  }
 });
 
 // --- boot ---
