@@ -17,6 +17,7 @@ const FILES = {
 
 const MUSIC_FILES = {
   levelBackground: '/sounds/background-music.mp3',
+  dragonBoss: '/sounds/OST_Mollusque-Lanceur_Battle_Super_Mario_Odyssey.oga.mp3',
 };
 
 const cache = {};
@@ -64,10 +65,11 @@ export function stopSound(key) {
 // A single looping background track, kept subtle under the SFX above --
 // only one plays at a time, so starting a new one (or the same one again)
 // always stops whatever's currently playing first rather than layering.
-// LevelScene starts this on create() and stops it on its own 'shutdown'
-// event, so it plays through every regular level and falls silent the
-// moment she leaves one -- the memory room, the map, and the dragon fight
-// (BossScene) never call playMusic() at all, so it's just quiet there.
+// LevelScene and BossScene each start their own track on create() and stop
+// it on their own 'shutdown' event, so it plays through every regular
+// level (or the dragon fight) and falls silent the moment she leaves --
+// the memory room and the map never call playMusic() at all, so it's just
+// quiet there.
 let currentMusic = null;
 let currentMusicKey = null;
 

@@ -314,7 +314,7 @@ html, body {
 
 /* --- rescue pop-up, shown once right after the dragon falls --- */
 .rescue-modal-card {
-  width: min(440px, 90vw);
+  width: min(640px, 92vw);
   max-height: 82vh;
 }
 

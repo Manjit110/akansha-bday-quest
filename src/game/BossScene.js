@@ -5,7 +5,7 @@ import { ensureWandTexture } from './weapon.js';
 import { player as playerConfig } from '../data/player.js';
 import { friends } from '../data/friends.js';
 import { assetUrl } from '../assetPath.js';
-import { playSound } from '../sound.js';
+import { playSound, playMusic, stopMusic } from '../sound.js';
 
 const W = 960;
 const H = 540;
@@ -24,9 +24,16 @@ const PALETTE = {
 // real duration instead of ending in a couple of seconds. There's no
 // player character in this fight -- see buildAllySquad's comment -- so
 // the squad's own volley is the only thing that ever damages it.
+//
+// DRAGON_HP intentionally stays at 10 -- it's also the HUD pip count
+// (renderBossHP in main.js), and going much higher starts crowding that
+// row. HITS_PER_STAGE_* is the real length dial: at a fixed ~260ms
+// between shots (ALLY_FIRE_INTERVAL), this makes the fight last roughly
+// (DRAGON_HP * avg hits-per-stage * 0.26s) -- last tuned to ~34s real
+// time, up from an earlier ~12s.
 export const DRAGON_HP = 10;
-const HITS_PER_STAGE_MIN = 4;
-const HITS_PER_STAGE_MAX = 5;
+const HITS_PER_STAGE_MIN = 12;
+const HITS_PER_STAGE_MAX = 14;
 // The dragon patrols this whole band horizontally at one fixed altitude --
 // it never dives or changes height, only ever moving left/right along this
 // single line -- DRAGON_HIGH_Y sits below the jail cell (JAIL_Y=84, bottom
@@ -140,6 +147,14 @@ export default class BossScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#1a1035');
+
+    // The one boss-fight-specific track, louder than the regular levels'
+    // ambient background (0.14) since there's no other music/SFX
+    // competing for attention here -- stopped on this scene's own
+    // 'shutdown' (fired whether she wins, or backs out via Quit), same
+    // pattern LevelScene uses for its own background music.
+    playMusic('dragonBoss', { volume: 0.32 });
+    this.events.once('shutdown', () => stopMusic());
 
     for (let i = 0; i < 30; i++) {
       this.add.circle(Math.random() * W, Math.random() * (GROUND_Y - 60), 1.6, 0xffffff, 0.5);
