@@ -317,6 +317,7 @@ Happy Birthday, Akansha! 🥂`,
     quality: 'Her intellect and her ability to understand complex human emotions and predicaments.',
   }),
   mkFriend(2, 'Pulkit (Husband)', '#ffd166', 'male', '/friends/pulkit-face.jpg', {
+    photoTogether: '/friends/pulkit-together.jpg',
     message: `Happy Birthday, my love ❤️! It has been a long time since we met yet it just feels like yesterday. We practically have spent 1/3rd of our lives together.
 
 I hope you know how special you are to me. You are my wife, best friend and most importantly my time manager. I often say god plans things for me and in that, I have heard people saying you are the best planner and I am a bit of an atheist 🥹🤪.

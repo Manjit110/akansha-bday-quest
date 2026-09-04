@@ -5,9 +5,6 @@ import { mixColors } from './color.js';
 
 const W = 960;
 const H = 540;
-// Placeholder color for Akansha's half of the "together" photo until a real
-// one is supplied -- matches the hero's own gold, since she's the hero.
-const AKANSHA_PLACEHOLDER_COLOR = 0xffd166;
 
 // A slight, consistent tilt per card (like something actually pinned up),
 // not a fresh random angle every time you revisit.
@@ -35,6 +32,17 @@ const TEXT_STYLE = {
   align: 'center',
   wordWrap: { width: TEXT_CARD_W - 70 },
 };
+
+// The together-photo card gets the same generous space budget the other
+// cards use, not a fixed square -- fit *within* this box (aspect
+// preserved, see the 'together' branch in showCard), so portrait shots
+// end up tall and narrow, landscape ones wide and short, instead of
+// forced into one shape. This card's own vertical center (TOGETHER_CARD_Y)
+// sits lower than the other cards' (150) since it's tall enough that
+// centering on 150 would push its top off-screen.
+const TOGETHER_MAX_W = 480;
+const TOGETHER_MAX_H = 400;
+const TOGETHER_CARD_Y = 255;
 
 export default class RevealRoomScene extends Phaser.Scene {
   constructor() {
@@ -66,7 +74,6 @@ export default class RevealRoomScene extends Phaser.Scene {
     if (btnShoot) btnShoot.style.display = 'none';
 
     this.drawRoom();
-    this.createTogetherVisual();
 
     this.cards = this.buildCards();
     this.cardContainer = this.add.container(W / 2, 150);
@@ -225,98 +232,14 @@ export default class RevealRoomScene extends Phaser.Scene {
     return [top, bottom, left, right, ...corners];
   }
 
-  // A photo of the two of them together, at the bottom of the room -- or,
-  // until a real photoTogether is supplied, a placeholder of the two
-  // avatars side by side so the spot reads clearly as "their photo goes
-  // here" rather than looking broken.
-  createTogetherVisual() {
-    const f = this.friend;
-    const cx = W / 2;
-    // Sits in the gap between the cards above (bottom out around y=290 at
-    // most) and the "tap to continue" hint (y=500). At this frame size that
-    // gap is tighter than either side's own decorative fringe can fully
-    // clear, so this is biased toward the bottom constraint specifically --
-    // the caption text colliding with the hint text is a real readability
-    // bug, while a little overlap with the cards' floral border above is
-    // just cosmetic (confirmed fine at this magnitude by eye).
-    const cy = H - 180;
-    const togetherKey = `together-friend-${f.id}`;
-    const friendColor = Phaser.Display.Color.HexStringToColor(f.color).color;
-
-    this.togetherGroup = [];
-
-    if (this.textures.exists(togetherKey)) {
-      // Fit the frame to the photo's own aspect ratio instead of stretching
-      // every photo into one fixed landscape box -- most of these are
-      // portrait shots, and forcing them into a fixed landscape frame
-      // squished them noticeably. Width is where there's actual room to
-      // vary, so most photos (portrait or landscape) end up height-
-      // constrained and simply narrower or wider as their real proportions
-      // call for, instead of distorted.
-      const maxW = 260;
-      const maxH = 195;
-      const src = this.textures.get(togetherKey).source[0];
-      const aspect = src.width / src.height;
-      const frameW = aspect >= maxW / maxH ? maxW : maxH * aspect;
-      const frameH = aspect >= maxW / maxH ? maxW / aspect : maxH;
-      const outer = this.add.rectangle(cx, cy, frameW + 8, frameH + 8, 0xffd166);
-      const photo = this.add.image(cx, cy, togetherKey);
-      photo.setDisplaySize(frameW, frameH);
-      const caption = this.add
-        .text(cx, cy + frameH / 2 + 13, `Akansha & ${f.name}`, {
-          fontFamily: 'Quicksand, sans-serif',
-          fontSize: '11px',
-          fontStyle: '700',
-          color: '#c9b8e8',
-        })
-        .setOrigin(0.5);
-      this.togetherGroup.push(outer, photo, caption);
-    } else {
-      const r = 27;
-      const gap = 8;
-      const leftX = cx - r - gap / 2;
-      const rightX = cx + r + gap / 2;
-
-      const akanshaCircle = this.add.circle(leftX, cy, r, AKANSHA_PLACEHOLDER_COLOR);
-      akanshaCircle.setStrokeStyle(3, 0x1a1035, 1);
-      const akanshaLabel = this.add
-        .text(leftX, cy, 'A', { fontFamily: 'Press Start 2P, monospace', fontSize: '18px', color: '#2b1140' })
-        .setOrigin(0.5);
-
-      const friendCircle = this.add.circle(rightX, cy, r, friendColor);
-      friendCircle.setStrokeStyle(3, 0x1a1035, 1);
-      const friendLabel = this.add
-        .text(rightX, cy, f.name.trim().charAt(0).toUpperCase() || '?', {
-          fontFamily: 'Press Start 2P, monospace',
-          fontSize: '18px',
-          color: '#2b1140',
-        })
-        .setOrigin(0.5);
-
-      const heart = this.add.text(cx, cy - r - 12, '💛', { fontSize: '15px' }).setOrigin(0.5);
-
-      const caption = this.add
-        .text(cx, cy + r + 16, `Akansha & ${f.name}`, {
-          fontFamily: 'Quicksand, sans-serif',
-          fontSize: '12px',
-          fontStyle: '700',
-          color: '#c9b8e8',
-        })
-        .setOrigin(0.5);
-
-      this.togetherGroup.push(akanshaCircle, akanshaLabel, friendCircle, friendLabel, heart, caption);
-    }
-
-    this.togetherGroup.forEach((o) => o.setAlpha(0));
-    this.tweens.add({ targets: this.togetherGroup, alpha: 1, duration: 500 });
-  }
-
   buildCards() {
     const f = this.friend;
-    // Always her solo photo up here -- the together photo (if any) has its
-    // own dedicated spot at the bottom of the room (see
-    // createTogetherVisual), so showing it here too was redundant.
     const photoKey = f.photoSolo ? `face-friend-${f.id}` : null;
+    // Right after her solo photo, if there is one -- its own full-size
+    // card (see the 'together' branch in showCard) instead of a small
+    // fixture squeezed in permanently alongside the other cards, so it
+    // isn't limited to whatever space was left over.
+    const togetherKey = f.photoTogether ? `together-friend-${f.id}` : null;
     const textFields = [
       { icon: '🎂', label: 'Birthday Wish', text: f.message },
       { icon: '👀', label: 'First Impression', text: f.firstImpression },
@@ -338,7 +261,10 @@ export default class RevealRoomScene extends Phaser.Scene {
         text: pageText,
       }));
     });
-    return [{ type: 'photo', label: f.name, photoKey }, ...textCards];
+    const cards = [{ type: 'photo', label: f.name, photoKey }];
+    if (togetherKey) cards.push({ type: 'together', photoKey: togetherKey });
+    cards.push(...textCards);
+    return cards;
   }
 
   // Greedily packs a long answer into as few cards as will fit, measured
@@ -435,6 +361,11 @@ export default class RevealRoomScene extends Phaser.Scene {
     const paperColor = mixColors(0xf7ecd6, color, 0.1);
     const borderColor = mixColors(0xd9c39c, color, 0.35);
 
+    // Every other card shares one vertical center (150); the together-
+    // photo card is tall enough that centering it there would push its
+    // top off-screen, so it gets its own, lower center instead.
+    this.cardContainer.y = card.type === 'together' ? TOGETHER_CARD_Y : 150;
+
     if (card.type === 'photo') {
       const size = 200;
       const frame = this.paperCard(size, size, paperColor, borderColor, 10);
@@ -480,6 +411,31 @@ export default class RevealRoomScene extends Phaser.Scene {
         .setOrigin(0.5);
       parts.push(label, this.addTape(size, index));
       this.cardContainer.add(parts);
+    } else if (card.type === 'together') {
+      // Aspect-preserving fit within the box (like the old persistent
+      // fixture did) instead of a fixed square -- the frame's own w/h
+      // already match the source's real proportions, so setDisplaySize
+      // below scales both axes by the same factor and nothing distorts.
+      const src = this.textures.get(card.photoKey).source[0];
+      const aspect = src.width / src.height;
+      const frameW = aspect >= TOGETHER_MAX_W / TOGETHER_MAX_H ? TOGETHER_MAX_W : TOGETHER_MAX_H * aspect;
+      const frameH = aspect >= TOGETHER_MAX_W / TOGETHER_MAX_H ? TOGETHER_MAX_W / aspect : TOGETHER_MAX_H;
+      const cardW = frameW + 32;
+      const cardH = frameH + 56;
+      const frame = this.paperCard(cardW, cardH, paperColor, borderColor, 12);
+      const border = this.addFloralBorder(cardW, cardH);
+      const inner = this.add.rectangle(0, -12, frameW + 8, frameH + 8, 0x1a1035);
+      const photo = this.add.image(0, -12, card.photoKey);
+      photo.setDisplaySize(frameW, frameH);
+      const label = this.add
+        .text(0, cardH / 2 - 22, `Akansha & ${this.friend.name}`, {
+          fontFamily: 'Caveat, cursive',
+          fontSize: '26px',
+          fontStyle: '700',
+          color: '#5a3d2a',
+        })
+        .setOrigin(0.5);
+      this.cardContainer.add([frame, ...border, inner, photo, label, this.addTape(cardH, index)]);
     } else {
       const w = TEXT_CARD_W;
       const h = TEXT_CARD_H;
@@ -524,7 +480,7 @@ export default class RevealRoomScene extends Phaser.Scene {
     if (this.cardIndex >= this.cards.length) {
       this.finishing = true;
       this.tweens.add({
-        targets: [this.cardContainer, this.hint, ...this.togetherGroup].filter(Boolean),
+        targets: [this.cardContainer, this.hint].filter(Boolean),
         alpha: 0,
         duration: 400,
         onComplete: () => this.callbacks.onDone(),
