@@ -1,6 +1,11 @@
 import { mulberry32 } from './rng.js';
 
-export const GROUND_Y = 460;
+// Canvas grew from 960x540 to 960x702 (see main.js) -- shifted down by the
+// same +162px so every existing platform-height/jump-reachability formula
+// below (all relative to GROUND_Y) keeps working unchanged, with the extra
+// height just becoming more sky above the level instead of changing any
+// gameplay geometry.
+export const GROUND_Y = 622;
 
 // The player's jump (velocity 560, gravity 1400) only reaches ~112px above
 // its takeoff point. Any platform placed higher than that is physically
@@ -72,7 +77,7 @@ export function generateLevel(levelIndex, total) {
 
   return {
     width,
-    height: 540,
+    height: 702,
     groundY: GROUND_Y,
     groundSegments,
     platforms,

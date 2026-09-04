@@ -421,7 +421,9 @@ html, body {
 #game-container {
   width: 100%;
   max-width: 960px;
-  aspect-ratio: 16 / 9;
+  /* Must match main.js's Phaser.Game width/height exactly -- this is what
+     Phaser's Scale.FIT actually fits the canvas into. */
+  aspect-ratio: 960 / 702;
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;

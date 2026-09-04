@@ -4,7 +4,12 @@ import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
 
 const W = 960;
-const H = 540;
+// Canvas grew from 960x540 to 960x702 (see main.js). Every layout position
+// in this file is either a fixed offset from the top (cards, together-
+// photo card -- unaffected) or an H-relative formula (hint/dots/floor/
+// pillars/sparkle zone, all written as H-something), so the extra 162px
+// just becomes more room between the two without any other change needed.
+const H = 702;
 
 // A slight, consistent tilt per card (like something actually pinned up),
 // not a fresh random angle every time you revisit.

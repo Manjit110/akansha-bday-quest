@@ -221,8 +221,19 @@ function ensureGame() {
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game-container',
+    // Height is 30% taller than the original 540 (960x540 -> 960x702) --
+    // width stays 960 since that's never the constrained dimension even on
+    // a narrow phone (the CSS container is always capped at 100% of the
+    // viewport width, so widening it wouldn't display any bigger there).
+    // The extra height directly grows the canvas as actually rendered on
+    // a phone: its on-screen width is unchanged, but since the container's
+    // aspect-ratio (see style.css) is kept in sync with this, its on-
+    // screen height grows by the same 30%, using more of the phone
+    // screen's height instead of leaving it empty below the controls.
+    // GROUND_Y (levelConfig.js, BossScene.js) and every H-relative layout
+    // formula (RevealRoomScene.js) shifted down by the same 162px to match.
     width: 960,
-    height: 540,
+    height: 702,
     backgroundColor: '#1a1035',
     physics: { default: 'arcade', arcade: { gravity: { y: 1400 }, debug: false } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
