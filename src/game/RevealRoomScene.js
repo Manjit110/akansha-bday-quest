@@ -69,7 +69,7 @@ export default class RevealRoomScene extends Phaser.Scene {
     this.createTogetherVisual();
 
     this.cards = this.buildCards();
-    this.cardContainer = this.add.container(W / 2, 160);
+    this.cardContainer = this.add.container(W / 2, 150);
     this.showCard(0);
 
     // fillAlpha here is baked into the shape and separate from the
@@ -77,13 +77,13 @@ export default class RevealRoomScene extends Phaser.Scene {
     // dimming via setAlpha() below, so brightening later actually works.
     const dotSpacing = 16;
     this.progressDots = this.cards.map((_, i) => {
-      const dot = this.add.circle(W / 2 - ((this.cards.length - 1) * dotSpacing) / 2 + i * dotSpacing, H - 24, 4, 0xffffff, 1);
+      const dot = this.add.circle(W / 2 - ((this.cards.length - 1) * dotSpacing) / 2 + i * dotSpacing, H - 18, 4, 0xffffff, 1);
       dot.setAlpha(i === 0 ? 1 : 0.3);
       return dot;
     });
 
     this.hint = this.add
-      .text(W / 2, H - 46, 'tap to continue ▶', {
+      .text(W / 2, H - 40, 'tap to continue ▶', {
         fontFamily: 'Quicksand, sans-serif',
         fontSize: '13px',
         color: '#c9b8e8',
@@ -232,14 +232,14 @@ export default class RevealRoomScene extends Phaser.Scene {
   createTogetherVisual() {
     const f = this.friend;
     const cx = W / 2;
-    // Centered in the actual free gap between the cards above (bottom out
-    // around y=300 at most) and the "tap to continue" hint + progress dots
-    // fixed near the bottom (y=494/516) -- the old cy (H-108=432) put the
-    // frame's own bottom edge and caption past both of those, so most
-    // portrait photos visibly overlapped the hint text/dots. This sits
-    // higher, in the space that was actually free -- nudged up a little
-    // further still to make room for a bigger frame below.
-    const cy = H - 178;
+    // Sits in the gap between the cards above (bottom out around y=290 at
+    // most) and the "tap to continue" hint (y=500). At this frame size that
+    // gap is tighter than either side's own decorative fringe can fully
+    // clear, so this is biased toward the bottom constraint specifically --
+    // the caption text colliding with the hint text is a real readability
+    // bug, while a little overlap with the cards' floral border above is
+    // just cosmetic (confirmed fine at this magnitude by eye).
+    const cy = H - 180;
     const togetherKey = `together-friend-${f.id}`;
     const friendColor = Phaser.Display.Color.HexStringToColor(f.color).color;
 
@@ -253,8 +253,8 @@ export default class RevealRoomScene extends Phaser.Scene {
       // vary, so most photos (portrait or landscape) end up height-
       // constrained and simply narrower or wider as their real proportions
       // call for, instead of distorted.
-      const maxW = 230;
-      const maxH = 172;
+      const maxW = 260;
+      const maxH = 195;
       const src = this.textures.get(togetherKey).source[0];
       const aspect = src.width / src.height;
       const frameW = aspect >= maxW / maxH ? maxW : maxH * aspect;

@@ -104,8 +104,10 @@ html, body {
 
 .hint {
   margin-top: 24px;
+  max-width: 600px;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 39px;
+  line-height: 1.4;
   opacity: 0.8;
 }
 
@@ -406,11 +408,6 @@ html, body {
   color: var(--text-dim);
   font-size: 16px;
   line-height: 1.6;
-}
-.story-rally-line {
-  color: var(--text-light) !important;
-  font-weight: 700;
-  font-size: 18px !important;
 }
 
 #game-container {
