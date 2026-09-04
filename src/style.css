@@ -416,7 +416,6 @@ html, body {
 }
 
 #game-container {
-  position: relative;
   width: 100%;
   max-width: 960px;
   aspect-ratio: 16 / 9;
@@ -426,77 +425,59 @@ html, body {
   box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
 }
 
-.btn-shoot {
-  position: absolute;
-  right: 24px;
-  bottom: 28px;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.5);
-  background: radial-gradient(circle at 35% 30%, var(--accent-gold), var(--accent-pink));
-  font-size: 28px;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
-  touch-action: manipulation;
-  user-select: none;
-  /* A landscape canvas on a portrait phone is short enough that these
-     controls sit right over the ground/action, not off in empty margin
-     below it -- kept translucent so what's happening underneath still
-     reads through, and brought to full opacity while actually pressed. */
-  opacity: 0.72;
-}
-.btn-shoot:active { transform: scale(0.92); opacity: 1; }
-
-/* --- on-screen movement/jump controls -- left thumb runs the d-pad, right
+/* --- on-screen movement/jump/shoot controls, in normal flow directly
+   below the canvas (not overlaid on top of it -- see index.html's
+   comment on #game-controls for why). Left thumb runs the d-pad, right
    thumb handles jump + shoot, mirroring the keyboard's own left-hand/
-   right-hand split (WASD+F). Visible on every device, not just touch ones
-   (same as .btn-shoot always was) -- a mouse click works on them too, so
-   there's no device-sniffing to get wrong. */
-.touch-move {
-  position: absolute;
-  left: 24px;
-  bottom: 28px;
+   right-hand split (WASD+F). Visible on every device, not just touch
+   ones (a mouse click works on them too), so there's no device-sniffing
+   to get wrong. */
+#game-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 960px;
+  margin: 14px auto 0;
+  padding: 0 16px;
+}
+
+.touch-move,
+.touch-action {
   display: flex;
   gap: 14px;
 }
 
-.btn-dpad {
-  width: 58px;
-  height: 58px;
+.btn-dpad,
+.btn-jump,
+.btn-shoot {
   border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.5);
-  background: radial-gradient(circle at 35% 30%, var(--accent-teal), #3a8fae);
-  color: #10222b;
-  font-size: 24px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   touch-action: manipulation;
   user-select: none;
-  opacity: 0.72;
 }
-.btn-dpad:active { transform: scale(0.92); opacity: 1; }
+.btn-dpad:active,
+.btn-jump:active,
+.btn-shoot:active { transform: scale(0.92); }
 
+.btn-dpad,
 .btn-jump {
-  position: absolute;
-  right: 104px;
-  bottom: 28px;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.5);
+  width: 50px;
+  height: 50px;
   background: radial-gradient(circle at 35% 30%, var(--accent-teal), #3a8fae);
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
-  touch-action: manipulation;
-  user-select: none;
-  opacity: 0.72;
+  font-size: 20px;
 }
-.btn-jump:active { transform: scale(0.92); opacity: 1; }
+.btn-dpad { color: #10222b; }
+
+.btn-shoot {
+  width: 54px;
+  height: 54px;
+  background: radial-gradient(circle at 35% 30%, var(--accent-gold), var(--accent-pink));
+  font-size: 24px;
+}
 
 /* --- finale screen --- */
 #finale-grid {

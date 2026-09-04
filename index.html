@@ -82,18 +82,23 @@
         <div id="boss-hp"></div>
         <div id="hearts"></div>
       </div>
-      <div id="game-container">
-        <!-- Anchored to the canvas's own box (see #game-container's
-             position:relative), not the viewport -- on a narrow phone the
-             960x540 canvas letterboxes down to a short strip, and pinning
-             these to the screen's bottom edge instead left them stranded
-             far below it, with a dead gap in between. -->
+      <div id="game-container"></div>
+      <!-- In normal flow below the canvas, not overlaid on top of it -- on
+           a narrow phone the 960x540 canvas letterboxes down to a short
+           strip, and overlaying controls on it covered too much of the
+           actual play area (the ground/character were often right behind
+           a button). Sitting below means nothing in the game world is ever
+           covered, at the cost of some empty margin above/below the whole
+           group on very tall/narrow screens -- an easy trade. -->
+      <div id="game-controls">
         <div id="touch-move" class="touch-move">
           <button id="btn-move-left" class="btn-dpad" aria-label="Move left">◀</button>
           <button id="btn-move-right" class="btn-dpad" aria-label="Move right">▶</button>
         </div>
-        <button id="btn-jump" class="btn-jump" aria-label="Jump">▲</button>
-        <button id="btn-shoot" class="btn-shoot" aria-label="Shoot">🔮</button>
+        <div class="touch-action">
+          <button id="btn-jump" class="btn-jump" aria-label="Jump">▲</button>
+          <button id="btn-shoot" class="btn-shoot" aria-label="Shoot">🔮</button>
+        </div>
       </div>
     </section>
 
