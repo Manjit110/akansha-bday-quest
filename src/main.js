@@ -7,6 +7,7 @@ import { playSound, stopSound } from './sound.js';
 import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
 import RevealRoomScene from './game/RevealRoomScene.js';
+import { isMobileReveal, showRevealHtml } from './revealHtml.js';
 
 const LAST_NAME_KEY = 'akansha-quest-player-name';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];
@@ -303,6 +304,14 @@ function startLevel(index) {
 // memory room (photo + messages), skipping the level itself.
 function revisitFriend(index) {
   stopSound('clear');
+  // On a short landscape phone this skips Phaser/the canvas entirely --
+  // see isMobileReveal()/showRevealHtml() for why. Reaching this screen
+  // at all means she's already completed a level, so ensureGame() has
+  // already run at least once; no need to touch it again here.
+  if (isMobileReveal()) {
+    showRevealHtml(friends[index], () => goHome());
+    return;
+  }
   bossHpEl.style.display = 'none';
   btnShoot.style.display = 'none';
   touchMove.style.display = 'none';

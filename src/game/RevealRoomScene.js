@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { assetUrl } from '../assetPath.js';
 import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
+import { isMobileReveal, showRevealHtml } from '../revealHtml.js';
 
 // Canvas is now 1280x480 (see main.js), wide-and-short to fill a landscape
 // phone screen. Most of this file's layout is either a fixed offset from
@@ -65,6 +66,11 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   preload() {
+    // Skipped on a short landscape phone -- create() below hands off to
+    // showRevealHtml() instead of drawing any of this, so there's no
+    // reason to spend a network request pulling these into Phaser's
+    // texture cache too (the HTML reveal loads its own <img>s directly).
+    if (isMobileReveal()) return;
     if (this.friend?.photoSolo && !this.textures.exists(`face-friend-${this.friend.id}`)) {
       this.load.image(`face-friend-${this.friend.id}`, assetUrl(this.friend.photoSolo));
     }
@@ -86,6 +92,17 @@ export default class RevealRoomScene extends Phaser.Scene {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+
+    // On a short landscape phone, hand off to the HTML reveal screen
+    // instead of drawing any of this room -- see isMobileReveal() in
+    // revealHtml.js. main.js's revisitFriend() makes the same check for
+    // the *revisit* path; this covers finishing a level for the first
+    // time, which reaches here directly from LevelScene, bypassing
+    // main.js entirely (see the comment above).
+    if (isMobileReveal()) {
+      showRevealHtml(this.friend, () => this.callbacks.onDone());
+      return;
+    }
 
     this.drawRoom();
 

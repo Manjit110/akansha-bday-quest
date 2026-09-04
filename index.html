@@ -114,6 +114,21 @@
       </div>
     </section>
 
+    <!-- MOBILE MEMORY-ROOM REVEAL: a friend's photo(s) + messages as
+         normal scrollable HTML instead of RevealRoomScene's Phaser cards
+         (see isMobileReveal() in revealHtml.js for why -- canvas text
+         shrinks along with the canvas on a short phone, this doesn't). -->
+    <section id="screen-reveal" class="screen reveal-screen">
+      <div class="stars"></div>
+      <div class="reveal-photos">
+        <div id="reveal-photo-solo" class="reveal-photo-solo"></div>
+        <img id="reveal-photo-together" class="reveal-photo-together" alt="" />
+      </div>
+      <h2 id="reveal-name" class="pixel-title small"></h2>
+      <div id="reveal-fields" class="reveal-fields"></div>
+      <button class="btn-primary" id="btn-reveal-continue">Continue</button>
+    </section>
+
     <!-- FINALE SCREEN -->
     <section id="screen-finale" class="screen">
       <div id="confetti-layer"></div>

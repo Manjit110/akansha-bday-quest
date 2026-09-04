@@ -550,6 +550,72 @@ html, body {
   font-size: 24px;
 }
 
+/* --- mobile memory-room reveal (see revealHtml.js) --- */
+/* flex-start unconditionally, not just on short viewports like the
+   media-query override further down -- this screen's content (photos +
+   up to 5 message fields) is long enough that .screen's default centered
+   overflow (see the short-landscape media query's own comment on this)
+   could clip its top even on a borderline-short viewport, and there's no
+   existing desktop layout to preserve here since this screen never
+   renders on desktop at all (see isMobileReveal). */
+.reveal-screen { justify-content: flex-start; padding-top: 18px; padding-bottom: 18px; }
+
+.reveal-photos {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.reveal-photo-solo {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--accent-teal);
+  flex-shrink: 0;
+}
+.reveal-photo-solo img { width: 100%; height: 100%; object-fit: cover; }
+
+.reveal-photo-together {
+  display: none;
+  max-width: min(320px, 58vw);
+  max-height: 180px;
+  border-radius: 12px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  object-fit: cover;
+}
+
+#reveal-name { color: var(--accent-gold); }
+
+.reveal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(560px, 92vw);
+  margin-bottom: 20px;
+}
+.reveal-field {
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 10px 16px;
+  text-align: left;
+}
+.reveal-field-label {
+  color: var(--accent-gold);
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.reveal-field-text {
+  margin: 0;
+  color: var(--text-light);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
 /* --- finale screen --- */
 #finale-grid {
   display: flex;
@@ -604,7 +670,21 @@ html, body {
    being the only real-world case since portrait is already blocked by
    .rotate-block above. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .screen { padding: 10px 20px; }
+  /* .screen centers its content vertically (justify-content: center) --
+     fine when everything fits, but when content is taller than the
+     viewport a centered flex item overflows *symmetrically* above and
+     below the visible box, and the default scroll position (top of the
+     scrollable range) lands in the middle of that overflow: the true top
+     of the content is scrolled past before you even start, and the true
+     bottom is still out of reach past the far end. That's what "top and
+     bottom clipped" actually was -- not a missing scrollbar, but centering
+     hiding both ends of content long enough to overflow (the finale
+     screen's message text is the worst case, but any screen can hit this).
+     flex-start makes the true top the scroll-start and the true bottom the
+     scroll-end, so everything is reachable top-to-bottom by scrolling --
+     scoped to short viewports only, since desktop content is short enough
+     that centering never overflows there. */
+  .screen { justify-content: flex-start; padding: 10px 20px; }
   .pixel-title { font-size: clamp(16px, 4vw, 26px); margin-bottom: 8px; }
   .pixel-title.small { font-size: clamp(13px, 3.2vw, 18px); margin-bottom: 6px; }
   .subtitle { margin-bottom: 14px; }
@@ -647,5 +727,28 @@ html, body {
     height: 44px;
     font-size: 18px;
   }
+
+  /* Map/finale/modals: same overflow problem as the story screens above
+     (content taller than a short phone's viewport), just with a grid of
+     circles instead of paragraphs -- shrink the grid items and margins
+     enough that the full node list (up to ~20 friends + the boss node)
+     fits without scrolling on a real short landscape phone. */
+  .player-tag { margin-bottom: 3px; font-size: 11px; }
+  #map-path { gap: 6px; }
+  .map-node { width: 40px; height: 40px; font-size: 13px; border-width: 2px; }
+  #boss-node-wrap { margin-top: 8px; }
+  .boss-node { width: 46px; height: 46px; font-size: 20px; border-width: 2px; }
+
+  #finale-grid { gap: 5px; margin-bottom: 10px; }
+  #finale-grid .map-node { width: 26px; height: 26px; font-size: 9px; }
+  .finale-note { font-size: 12px; line-height: 1.35; }
+
+  .modal-card { padding: 16px 16px 14px; gap: 8px; }
+  .modal-avatar { width: 52px; height: 52px; font-size: 20px; }
+  .modal-name { font-size: 15px; }
+
+  .rescue-modal-card { max-height: 94vh; max-height: 94svh; }
+  .rescue-modal-body { max-height: 58vh; max-height: 58svh; gap: 6px; }
+  .rescue-modal-body p { font-size: 12px; line-height: 1.32; }
 }
 
