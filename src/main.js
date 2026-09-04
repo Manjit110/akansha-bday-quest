@@ -8,6 +8,15 @@ import LevelScene from './game/LevelScene.js';
 import BossScene, { DRAGON_HP } from './game/BossScene.js';
 import RevealRoomScene from './game/RevealRoomScene.js';
 import { isMobileReveal, showRevealHtml } from './revealHtml.js';
+import { initMobileGate } from './mobileGate.js';
+
+// Before anything else -- a phone-sized screen with no valid code stays
+// on the gate screen; everything below still runs (cheap, and simpler
+// than threading a "don't bother" flag through the rest of this file),
+// but #mobile-gate's z-index (see style.css) sits above every other
+// screen, including .rotate-block, so nothing behind it is visible or
+// reachable until she's past it.
+initMobileGate();
 
 const LAST_NAME_KEY = 'akansha-quest-player-name';
 const CONFETTI_COLORS = ['#ff8fab', '#ffd166', '#7fe7d6', '#c77dff', '#a0c4ff'];

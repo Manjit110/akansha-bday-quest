@@ -1,9 +1,9 @@
 import { assetUrl } from './assetPath.js';
+import { isShortLandscapePhone } from './deviceMode.js';
 
-// Same short-landscape-phone boundary style.css's media queries use
-// throughout (see the "short landscape viewports" block there). Below
-// this, RevealRoomScene's Phaser cards -- text baked into the same
-// canvas gameplay uses, which shrinks to fit a short phone screen (see
+// Below the short-landscape-phone boundary (see deviceMode.js),
+// RevealRoomScene's Phaser cards -- text baked into the same canvas
+// gameplay uses, which shrinks to fit a short phone screen (see
 // #game-container's short-viewport override) -- become too small to
 // comfortably read. Real HTML text has no such ceiling, so the memory
 // room renders as a normal scrollable screen instead on these devices,
@@ -11,7 +11,7 @@ import { assetUrl } from './assetPath.js';
 // (main.js's revisitFriend, and RevealRoomScene.create() for finishing a
 // level the first time) check this the same way.
 export function isMobileReveal() {
-  return window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
+  return isShortLandscapePhone();
 }
 
 function initialAvatarHTML(friend) {
@@ -87,5 +87,5 @@ export function showRevealHtml(friend, onDone) {
 
   document.getElementById('btn-reveal-continue').onclick = () => onDone();
 
-  document.getElementById('screen-reveal').scrollTop = 0;
+  document.getElementById('reveal-scroll').scrollTop = 0;
 }

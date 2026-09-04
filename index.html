@@ -12,6 +12,22 @@
 </head>
 <body>
 
+  <!-- Access-code gate for phone-sized screens (see mobileGate.js) --
+       above .rotate-block's own z-index so a phone in portrait hits this
+       *before* the "turn your phone sideways" prompt, not after. Hidden
+       (display: none, see .mobile-gate) unless mobileGate.js's
+       initMobileGate() decides this device actually needs it. -->
+  <div id="mobile-gate" class="mobile-gate">
+    <div class="stars"></div>
+    <h1 class="pixel-title small">A Quest for<br />Akansha</h1>
+    <p class="mobile-gate-message">Playing on a phone needs an access code.<br />Don't have one? Play on a laptop or desktop instead.</p>
+    <form id="mobile-gate-form" class="mobile-gate-form">
+      <input id="mobile-gate-input" class="text-input" type="text" autocomplete="off" placeholder="Enter code" />
+      <p id="mobile-gate-error" class="name-error"></p>
+      <button class="btn-primary" type="submit">Unlock</button>
+    </form>
+  </div>
+
   <!-- Shown instead of everything else when the device is in portrait --
        landscape is the only supported orientation now (see #game-container
        in style.css, sized specifically to fill a landscape phone screen).
@@ -120,12 +136,21 @@
          shrinks along with the canvas on a short phone, this doesn't). -->
     <section id="screen-reveal" class="screen reveal-screen">
       <div class="stars"></div>
-      <div class="reveal-photos">
-        <div id="reveal-photo-solo" class="reveal-photo-solo"></div>
-        <img id="reveal-photo-together" class="reveal-photo-together" alt="" />
+      <!-- Everything scrolls in here; the Continue button below is a
+           fixed footer outside this scroller (not the last thing you'd
+           otherwise have to scroll down to) -- see .reveal-screen's own
+           comment in style.css for why: a scroll gesture that ends right
+           on top of a button can get eaten as part of the scroll instead
+           of registering as a tap, which was leaving no reliable way to
+           continue. -->
+      <div id="reveal-scroll" class="reveal-scroll">
+        <div class="reveal-photos">
+          <div id="reveal-photo-solo" class="reveal-photo-solo"></div>
+          <img id="reveal-photo-together" class="reveal-photo-together" alt="" />
+        </div>
+        <h2 id="reveal-name" class="pixel-title small"></h2>
+        <div id="reveal-fields" class="reveal-fields"></div>
       </div>
-      <h2 id="reveal-name" class="pixel-title small"></h2>
-      <div id="reveal-fields" class="reveal-fields"></div>
       <button class="btn-primary" id="btn-reveal-continue">Continue</button>
     </section>
 

@@ -29,6 +29,37 @@ html, body {
   height: 100vh;
 }
 
+/* --- mobile access-code gate (see mobileGate.js) --- */
+.mobile-gate {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  text-align: center;
+  background: radial-gradient(ellipse at top, var(--bg-mid), var(--bg-deep) 70%);
+}
+.mobile-gate.active { display: flex; }
+.mobile-gate-message {
+  max-width: 320px;
+  margin: 4px 0 6px;
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.mobile-gate-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(280px, 84vw);
+}
+
 /* --- portrait block: landscape is the only supported orientation --- */
 .rotate-block {
   display: none;
@@ -551,14 +582,33 @@ html, body {
 }
 
 /* --- mobile memory-room reveal (see revealHtml.js) --- */
-/* flex-start unconditionally, not just on short viewports like the
-   media-query override further down -- this screen's content (photos +
-   up to 5 message fields) is long enough that .screen's default centered
-   overflow (see the short-landscape media query's own comment on this)
-   could clip its top even on a borderline-short viewport, and there's no
-   existing desktop layout to preserve here since this screen never
-   renders on desktop at all (see isMobileReveal). */
-.reveal-screen { justify-content: flex-start; padding-top: 18px; padding-bottom: 18px; }
+/* .screen's own overflow-y: auto is turned off here -- #reveal-scroll
+   below owns the scrolling instead, so the Continue button can sit
+   *outside* the scrollable area as a fixed footer (mirroring how
+   #screen-game keeps #game-controls out of any scroll). A button you
+   have to scroll to reach is exactly the failure mode that made
+   Continue unreliable here: a scroll gesture that happens to end right
+   on top of a button can get consumed as the scroll's momentum/release
+   rather than registering as a tap, so on a real phone tapping "Continue"
+   right after scrolling down to it could silently do nothing. Pinning it
+   outside the scroller means reaching it never requires scrolling to
+   end *on* it in the first place. flex-start (not .screen's default
+   centered) for the same reason .story-text etc. need it on short
+   viewports -- except unconditional here, since this screen never
+   renders on desktop at all (see isMobileReveal) and always needs it. */
+.reveal-screen { justify-content: flex-start; overflow: hidden; padding: 18px 20px 14px; }
+
+.reveal-scroll {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#btn-reveal-continue { flex-shrink: 0; margin-top: 14px; }
 
 .reveal-photos {
   display: flex;
@@ -710,22 +760,27 @@ html, body {
   #game-container {
     width: auto;
     max-width: 100%;
-    height: calc(100vh - 100px);
-    height: calc(100svh - 100px);
+    height: calc(100vh - 130px);
+    height: calc(100svh - 130px);
     margin: 2px auto 0;
   }
 
-  #game-controls { margin: 3px auto 0; padding: 0 10px; }
-  .touch-move, .touch-action { gap: 8px; }
+  /* Sized up from an earlier, more cautious pass (40/44px) -- too small
+     to comfortably tap in practice. Bigger than #game-container's budget
+     above accounts for on its own would need trimming the canvas further
+     to compensate, which is the right trade: an easy-to-hit control beats
+     a slightly taller play area. */
+  #game-controls { margin: 4px auto 0; padding: 0 10px; }
+  .touch-move, .touch-action { gap: 10px; }
   .btn-dpad, .btn-jump {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
   }
   .btn-shoot {
-    width: 44px;
-    height: 44px;
-    font-size: 18px;
+    width: 60px;
+    height: 60px;
+    font-size: 26px;
   }
 
   /* Map/finale/modals: same overflow problem as the story screens above

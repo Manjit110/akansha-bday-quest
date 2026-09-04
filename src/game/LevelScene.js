@@ -12,6 +12,7 @@ import { playSound, playMusic, stopMusic } from '../sound.js';
 import { MONSTER_IMAGES } from '../data/monsterImages.js';
 import { bossQuotes } from '../data/bossQuotes.js';
 import { createThoughtCloud } from './thoughtCloud.js';
+import { isShortLandscapePhone } from '../deviceMode.js';
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -42,6 +43,11 @@ const BOSS_HP = 3;
 const BOSS_FIRE_DELAY_BASE = 3200;
 const BOSS_FIRE_DELAY_STEP = 50;
 const BOSS_FIRE_DELAY_MIN = 2200;
+// A touch d-pad can't reposition/dodge as quickly or precisely as a
+// keyboard can, so the same fire rate that's gentle on desktop reads as
+// noticeably harder on a real short landscape phone -- slowed down there
+// specifically (see isShortLandscapePhone), desktop unchanged.
+const MOBILE_FIRE_DELAY_MULTIPLIER = 1.6;
 
 export default class LevelScene extends Phaser.Scene {
   constructor() {
@@ -376,8 +382,9 @@ export default class LevelScene extends Phaser.Scene {
       this.add.circle(guardX - 14 + i * 14, guardY - MONSTER_BADGE_SIZE / 2 - 14, 5, 0xff5d5d)
     );
 
+    const baseDelay = Math.max(BOSS_FIRE_DELAY_MIN, BOSS_FIRE_DELAY_BASE - this.levelIndex * BOSS_FIRE_DELAY_STEP);
     this.bossThrowTimer = this.time.addEvent({
-      delay: Math.max(BOSS_FIRE_DELAY_MIN, BOSS_FIRE_DELAY_BASE - this.levelIndex * BOSS_FIRE_DELAY_STEP),
+      delay: isShortLandscapePhone() ? baseDelay * MOBILE_FIRE_DELAY_MULTIPLIER : baseDelay,
       callback: () => this.bossThrow(guardian),
       loop: true,
     });
