@@ -13,6 +13,7 @@ import { MONSTER_IMAGES } from '../data/monsterImages.js';
 import { bossQuotes } from '../data/bossQuotes.js';
 import { createThoughtCloud } from './thoughtCloud.js';
 import { isShortLandscapePhone } from '../deviceMode.js';
+import { isMobileReveal, showRevealHtml } from '../revealHtml.js';
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -338,7 +339,31 @@ export default class LevelScene extends Phaser.Scene {
     });
   }
 
+  // On a short landscape phone, the memory room is plain HTML (see
+  // isMobileReveal()/showRevealHtml() in revealHtml.js) -- it doesn't
+  // render anything through Phaser at all, so it has no business running
+  // as a Phaser Scene in the first place. Routing a "draw nothing" case
+  // through RevealRoomScene used to mean its update() kept getting
+  // called every frame regardless (Phaser doesn't know or care that
+  // create() returned early), and that already caused one confirmed,
+  // repeating uncaught exception in production -- the kind of Scene-
+  // lifecycle landmine (reused singleton instances, init/preload/create/
+  // update timing) that's easy to trip on again in some *other* way
+  // later. Skipping RevealRoomScene entirely for this case removes the
+  // whole category, not just the one exception that was caught: this
+  // scene's own update loop simply never runs while the HTML reveal is
+  // showing, because this scene was actually stopped, not left limping
+  // along with half its state uninitialized.
   enterRoom() {
+    if (isMobileReveal()) {
+      ['hearts', 'btn-shoot', 'touch-move', 'btn-jump'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      this.scene.stop();
+      showRevealHtml(this.friend, () => this.callbacks.onComplete(this.levelIndex));
+      return;
+    }
     this.scene.start('RevealRoomScene', {
       friend: this.friend,
       callbacks: { onDone: () => this.callbacks.onComplete(this.levelIndex) },

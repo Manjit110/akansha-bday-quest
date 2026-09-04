@@ -636,6 +636,24 @@ html, body {
   transform: translateX(-50%);
   z-index: 5;
 }
+/* Belt and suspenders: .screen's own opacity/pointer-events toggle
+   (see .screen.active at the top of this file) already hides an
+   inactive screen and everything in it, but that relies on
+   pointer-events correctly *inheriting* down to a position: fixed
+   descendant -- true per spec, but exactly the kind of cross-browser
+   assumption that's burned this reveal screen before (see the
+   #screen-reveal.reveal-screen padding-specificity comment above). A
+   fixed element is taken out of the layout entirely and pinned to the
+   viewport regardless of which screen is "active", so if it were ever
+   still hit-testable while hidden, it would sit right on top of
+   whatever's actually showing at that same spot on the map/replay
+   modal -- silently eating taps meant for something else, with no
+   visible sign anything was even there. display: none removes it from
+   hit-testing unambiguously, no inheritance chain involved, so this
+   can't happen regardless of how any one browser handles the rest. */
+#screen-reveal:not(.active) #btn-reveal-continue {
+  display: none;
+}
 
 .reveal-photos {
   display: flex;
@@ -791,11 +809,22 @@ html, body {
      54/60px size set above) buys back real canvas height for free. */
   #btn-quit-level { padding: 4px 10px; font-size: 11px; border-width: 1.5px; }
 
+  /* Measured directly (not guessed): HUD(28px) + this margin-top(1px) +
+     #game-controls's own margin-top(2px) + controls(60px) = 91px of real
+     overhead on both a Pixel 7 and an iPhone 13 in landscape, leaving
+     the canvas's old 100px budget with 9px of pure unused space below
+     the controls that was going nowhere. Trimmed to 94px -- reclaims
+     most of that 9px for the canvas while keeping a few px of buffer
+     against real-device rounding (subpixel layout, safe-area insets)
+     that a 0px margin could tip into an unwanted scroll on the one
+     screen where scrolling is actually a problem (the canvas itself
+     captures touch input, so scrolling to reach the controls isn't
+     possible -- see this media query's own top comment). */
   #game-container {
     width: auto;
     max-width: 100%;
-    height: calc(100vh - 100px);
-    height: calc(100svh - 100px);
+    height: calc(100vh - 94px);
+    height: calc(100svh - 94px);
     margin: 1px auto 0;
   }
 

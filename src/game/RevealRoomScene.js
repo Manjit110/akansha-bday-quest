@@ -2,7 +2,18 @@ import Phaser from 'phaser';
 import { assetUrl } from '../assetPath.js';
 import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
-import { isMobileReveal, showRevealHtml } from '../revealHtml.js';
+
+// This scene only ever runs on desktop now -- on a short landscape
+// phone, both entry points (main.js's revisitFriend, and LevelScene's
+// enterRoom for finishing a level the first time) check isMobileReveal()
+// themselves and hand off to the plain-HTML reveal (revealHtml.js)
+// *without* ever starting this Scene, rather than starting it and having
+// it immediately bail out. A Phaser Scene that's "started" but told to
+// render nothing still gets its update() called every frame by Phaser
+// regardless -- that mismatch caused one confirmed, repeating uncaught
+// exception in production. Not routing the mobile case through here at
+// all removes that whole category of Scene-lifecycle bug, not just the
+// one exception that got caught.
 
 // Canvas is now 1280x480 (see main.js), wide-and-short to fill a landscape
 // phone screen. Most of this file's layout is either a fixed offset from
@@ -66,11 +77,6 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   preload() {
-    // Skipped on a short landscape phone -- create() below hands off to
-    // showRevealHtml() instead of drawing any of this, so there's no
-    // reason to spend a network request pulling these into Phaser's
-    // texture cache too (the HTML reveal loads its own <img>s directly).
-    if (isMobileReveal()) return;
     if (this.friend?.photoSolo && !this.textures.exists(`face-friend-${this.friend.id}`)) {
       this.load.image(`face-friend-${this.friend.id}`, assetUrl(this.friend.photoSolo));
     }
@@ -80,29 +86,13 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   create() {
-    // No combat or movement here regardless of how we got here (finishing
-    // a level, or a revisit from the map) -- hide every player-only
-    // control. main.js's revisitFriend() already hides these before
-    // starting this scene for a *revisit*, but finishing a level for the
-    // first time reaches here directly from LevelScene's own
-    // this.scene.start('RevealRoomScene', ...) (see its create()),
-    // bypassing main.js entirely -- so this scene has to clear them
-    // itself too, rather than relying on whichever path got it here.
+    // No combat or movement here -- hide every player-only control.
+    // (Desktop-only now -- see this file's own top-of-file comment for
+    // why the mobile case never reaches this scene at all any more.)
     ['hearts', 'btn-shoot', 'touch-move', 'btn-jump'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-
-    // On a short landscape phone, hand off to the HTML reveal screen
-    // instead of drawing any of this room -- see isMobileReveal() in
-    // revealHtml.js. main.js's revisitFriend() makes the same check for
-    // the *revisit* path; this covers finishing a level for the first
-    // time, which reaches here directly from LevelScene, bypassing
-    // main.js entirely (see the comment above).
-    if (isMobileReveal()) {
-      showRevealHtml(this.friend, () => this.callbacks.onDone());
-      return;
-    }
 
     this.drawRoom();
 
@@ -526,17 +516,6 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   update() {
-    // On a short landscape phone, create() returns straight after
-    // handing off to showRevealHtml() (see isMobileReveal() above) --
-    // this.spaceKey is never set in that branch, but the scene stays
-    // active (and update() keeps getting called every frame) until
-    // Continue is tapped and something calls scene.stop() on it. Without
-    // this guard, Phaser.Input.Keyboard.JustDown(undefined) throws an
-    // uncaught exception on every single frame for as long as the mobile
-    // reveal is showing -- confirmed via a real page error
-    // ("Cannot read properties of undefined (reading '_justDown')"),
-    // not just a theoretical gap.
-    if (!this.spaceKey) return;
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.advance();
   }
 }
