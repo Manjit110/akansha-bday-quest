@@ -430,6 +430,30 @@ html, body {
   box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
 }
 
+/* #screen-game is a flex column (HUD, #game-container, #game-controls),
+   and flex items default to flex-shrink: 1 -- when everything doesn't fit
+   the viewport's height, the browser silently shrinks *only* the
+   container's height to make it fit (shrinking is main-axis-only in a
+   column flex, width is untouched), which quietly breaks the aspect-ratio
+   above without erroring. Phaser then has to letterbox its canvas *inside*
+   that now-wrong-shaped box to keep its own 960:702 shape correct,
+   rendering visibly narrower than the container's own border.
+   On a real laptop window (1366x768, 1280x720 included, not just extreme
+   cases) that reads as a plain bug -- there's no reason not to just show
+   it at full width there, so flex-shrink is locked off above that width.
+   A landscape *phone* is a genuinely different situation: at 960:702 its
+   viewport is short enough that a truly full-width canvas would push
+   #game-controls off screen, needing a scroll to reach them (verified --
+   750x342 landscape needs height 548 for a full-width canvas, way past
+   what's actually available). Left at the default flex-shrink there on
+   purpose, so it auto-fits narrower instead -- controls staying reachable
+   without scrolling wins over strict full-width on a screen this short. */
+@media (min-width: 931px) {
+  #game-container {
+    flex-shrink: 0;
+  }
+}
+
 /* --- on-screen movement/jump/shoot controls, in normal flow directly
    below the canvas (not overlaid on top of it -- see index.html's
    comment on #game-controls for why). Left thumb runs the d-pad, right

@@ -221,17 +221,19 @@ function ensureGame() {
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game-container',
-    // Height is 30% taller than the original 540 (960x540 -> 960x702) --
-    // width stays 960 since that's never the constrained dimension even on
-    // a narrow phone (the CSS container is always capped at 100% of the
-    // viewport width, so widening it wouldn't display any bigger there).
-    // The extra height directly grows the canvas as actually rendered on
-    // a phone: its on-screen width is unchanged, but since the container's
-    // aspect-ratio (see style.css) is kept in sync with this, its on-
-    // screen height grows by the same 30%, using more of the phone
-    // screen's height instead of leaving it empty below the controls.
-    // GROUND_Y (levelConfig.js, BossScene.js) and every H-relative layout
-    // formula (RevealRoomScene.js) shifted down by the same 162px to match.
+    // 30% taller than the original 540 (960x540 -> 960x702). Pushing this
+    // further (960x900, briefly tried) broke the desktop/laptop experience
+    // -- that shape doesn't fit a normal wide-but-not-very-tall laptop
+    // window, so the browser shrank the whole box down, letterboxing it to
+    // ~50% width even on a real 1366x768 screen. 702 is the point where
+    // mobile portrait gets meaningfully bigger without desktop paying that
+    // cost. "Things look bigger" the rest of the way there comes from
+    // LevelScene's own camera zoom (see its create()) instead of a taller
+    // canvas -- zoom actually magnifies sprites, where more canvas height
+    // alone only reveals more world, unchanged in size.
+    // GROUND_Y and every other absolute Y-position (BossScene.js,
+    // levelConfig.js) shifted down to match; RevealRoomScene.js needed no
+    // changes since its own layout is already written in H-relative terms.
     width: 960,
     height: 702,
     backgroundColor: '#1a1035',

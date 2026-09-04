@@ -168,6 +168,14 @@ export default class LevelScene extends Phaser.Scene {
     // --- camera ---
     this.cameras.main.setBounds(0, 0, cfg.width, cfg.height);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12, -200, 40);
+    // Purely a rendering transform -- physics/reachability (gravity,
+    // jump velocity, platform placement) all operate in world coordinates
+    // completely independent of this, so it doesn't affect what's
+    // actually reachable, only how much of the world is visible at once
+    // and how big everything in it looks. The extra magnification is what
+    // actually makes the player/enemies look bigger -- a taller canvas
+    // alone (see main.js) only reveals more world at the same size.
+    this.cameras.main.setZoom(1.3);
 
     // --- input ---
     this.cursors = this.input.keyboard.createCursorKeys();
