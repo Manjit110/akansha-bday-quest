@@ -87,5 +87,5 @@ export function showRevealHtml(friend, onDone) {
 
   document.getElementById('btn-reveal-continue').onclick = () => onDone();
 
-  document.getElementById('reveal-scroll').scrollTop = 0;
+  document.getElementById('screen-reveal').scrollTop = 0;
 }

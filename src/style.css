@@ -595,33 +595,47 @@ html, body {
 }
 
 /* --- mobile memory-room reveal (see revealHtml.js) --- */
-/* .screen's own overflow-y: auto is turned off here -- #reveal-scroll
-   below owns the scrolling instead, so the Continue button can sit
-   *outside* the scrollable area as a fixed footer (mirroring how
-   #screen-game keeps #game-controls out of any scroll). A button you
-   have to scroll to reach is exactly the failure mode that made
-   Continue unreliable here: a scroll gesture that happens to end right
-   on top of a button can get consumed as the scroll's momentum/release
-   rather than registering as a tap, so on a real phone tapping "Continue"
-   right after scrolling down to it could silently do nothing. Pinning it
-   outside the scroller means reaching it never requires scrolling to
-   end *on* it in the first place. flex-start (not .screen's default
-   centered) for the same reason .story-text etc. need it on short
-   viewports -- except unconditional here, since this screen never
-   renders on desktop at all (see isMobileReveal) and always needs it. */
-.reveal-screen { justify-content: flex-start; overflow: hidden; padding: 18px 20px 14px; }
+/* .screen's own overflow-y: auto scrolls this screen directly -- no
+   nested scroll container, deliberately: #btn-reveal-continue below is
+   position: fixed, pinned straight to the real browser viewport rather
+   than to any parent box's computed height, so it never depends on
+   #app/.screen/a flex child sizing correctly to stay reachable. That
+   used to matter here: a button placed *inside* the scrolling flow
+   needs scrolling all the way down to reach it (and a scroll gesture
+   ending right on top of a button can get consumed as the scroll's
+   own momentum instead of registering as a tap), and a button pinned
+   via flexbox as a sibling "footer" still depends on its container's
+   own height being exactly right for the visible viewport -- both
+   turned out to be more fragile in practice on real phones than in
+   testing. Fixed positioning has neither problem: it's anchored to the
+   viewport itself, full stop. flex-start (not .screen's default
+   centered) so scrolling starts from the true top -- see the
+   short-landscape media query's own comment on why centering plus
+   overflow clips both ends. padding-bottom leaves room at the end of
+   the scroll for the fixed button below to not cover the last card --
+   sized against the button's real height (39px) + its own bottom offset
+   (14px), plus margin, verified against the actual rendered button, not
+   guessed.
+   #screen-reveal.reveal-screen (not just .reveal-screen) is deliberate:
+   the short-landscape media query further down also sets `.screen`'s
+   own padding on every screen for the same short-viewport reason, and a
+   plain .screen/.reveal-screen tie in specificity is broken by *source
+   order* -- whichever rule is later in the file wins, regardless of
+   which one looks more specific to the situation. That silently
+   overwrote this padding down to the media query's 10px every time
+   before, which is exactly how the last card ended up hidden behind the
+   button despite this rule "setting" 84px. The #id prefix outranks any
+   class-only rule regardless of where it sits in the file, so this can't
+   get silently clobbered by some other rule again. */
+#screen-reveal.reveal-screen { justify-content: flex-start; padding: 18px 20px 90px; }
 
-.reveal-scroll {
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+#btn-reveal-continue {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 5;
 }
-
-#btn-reveal-continue { flex-shrink: 0; margin-top: 14px; }
 
 .reveal-photos {
   display: flex;
