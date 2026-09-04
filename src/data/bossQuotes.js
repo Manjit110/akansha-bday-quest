@@ -6,16 +6,16 @@
 export const bossQuotes = {
   1: 'Fuck You Monster. I have the big guns.', // Arpit
   2: 'I guess Manjit and Akansha were right about Ghosts and Monsters. I am Fucked. But lets fuck the monster first.', // Pulkit
-  3: 'Aaa Rakshas tujhe teri mummy kasam, mujhe jaane de nahi toh goli chla dungi.', // Ritika
+  3: 'Aae Rakshas tujhe teri mummy kasam, mujhe jaane de nahi toh goli chla dungi. Baby I am coming.', // Ritika
   4: 'I condemn you in the name of Jesus Christ. Go to hell man.', // Abhishek
   5: 'Oh bhai Ga***nd fatt rhi hai, but Akansha mai aayega terko bachane.', // Karan
-  6: 'Aaaa Rakshas mai tujhe shraap deti hoo, jahanuum mai marr jaake.', // Bhumi
+  6: 'Aaae Rakshas mai tujhe shraap deti hoo, jahanuum mai marr jaake.', // Bhumi
   7: 'Abhishek maine aapko bola that rakshas/bhoot real hote hai.', // Mahak
-  8: 'I donot believe in these things. I think its just a reflect. Let me fire some shots to confirm.', // Abhishek Loblaws
-  9: 'Thinking of Throwing Designer clothes at monster so that he gets distracted and can pass through.', // Rashika
-  10: 'Steals some rashikas designer clothes to use the same strategy.', // Adi
+  8: 'I donot believe in these things. I think its just a reflection. Let me fire some shots to confirm.', // Abhishek Loblaws
+  9: 'Females are better at defeating monsters than men. You are cooked Monster.', // Rashika
+  10: 'Kya mai 2 peg monster ko lagvaadu, toh mera dost banjayega. Then I can pass through.', // Adi
   11: 'Ye Monsters Bhoot Voot Kuch nahi hota koi insaan costume pehan kar khada hai. Ab pilegi iski guddi.', // Nitpreet
-  12: 'Aaaa jaadia raaste se hatt nahi toh teri guddi peldungi, manjit vaali nahi jo meri definition hai vo vaali.', // Zalak
+  12: 'Aaae jaadia raaste se hatt nahi toh teri guddi peldungi, manjit vaali nahi, jo meri definition hai vo vaali.', // Zalak
   13: 'Dekho dost agar mai chup chap nikal jayunga toh mera bhi bhala tumahar bhi bhala. Goli toh sale ko firr bhi g**nd mai maar ke jayunga.', // Piyush
   14: 'I have my meerut ka katta. I will be fine.', // Sara
   15: 'Mai ulta ghoom kar monster ke piche se nikal jaata hoon.', // Manish
