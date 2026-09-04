@@ -483,10 +483,15 @@ html, body {
    the 1280:480 shape (chosen specifically to fit a landscape phone, see
    #game-container above) needs so much less height than the old 960:702
    one that even a short landscape phone only barely overflows at true
-   full width now (a few px, not the ~200px it would have before) -- worth
-   the tiny scroll it can cost on the most cramped real devices in
-   exchange for the canvas always actually being full-width, matching
-   what "canvas should be full screen" actually asked for. */
+   full width now (a few px, not the ~200px it would have before) -- a
+   small scroll on the most cramped real devices, in exchange for the
+   canvas always actually being full-width. That tiny scroll turned out
+   to be a real problem in practice though: the canvas itself captures
+   touch input for gameplay, so on a real short phone there was no way
+   to actually perform the scroll needed to reach #game-controls below
+   it -- the shoot/jump buttons were unreachable, not just off-screen.
+   See the short-viewport override further down, which switches to
+   height-driven sizing specifically to avoid ever needing that scroll. */
 #game-container {
   flex-shrink: 0;
 }
@@ -606,5 +611,41 @@ html, body {
   .story-text { gap: 6px; margin-bottom: 12px; }
   .story-text p { font-size: 13px; line-height: 1.32; }
   .btn-primary { padding: 10px 26px; font-size: 15px; }
+
+  /* Game screen: on a real short landscape phone, sizing the canvas by
+     width (the default -- see #game-container above) makes HUD + canvas
+     + controls taller than the visible viewport, and since the canvas
+     itself captures touch input for gameplay, there's no way to scroll
+     down far enough to actually reach the controls -- they're not just
+     off-screen, they're unreachable. Flip the canvas to height-driven
+     sizing instead (explicit height, width: auto lets aspect-ratio
+     compute it) so HUD + canvas + controls always adds up to less than
+     100% of the viewport and nothing below the fold is ever needed. The
+     reserved budget below (HUD + controls + margins, shrunk to match)
+     must stay in sync with the actual HUD/controls rules just below it. */
+  #game-hud { padding: 4px 12px; }
+  #hearts, #boss-hp { font-size: 15px; gap: 3px; }
+  #level-title { font-size: 11px; }
+
+  #game-container {
+    width: auto;
+    max-width: 100%;
+    height: calc(100vh - 100px);
+    height: calc(100svh - 100px);
+    margin: 2px auto 0;
+  }
+
+  #game-controls { margin: 3px auto 0; padding: 0 10px; }
+  .touch-move, .touch-action { gap: 8px; }
+  .btn-dpad, .btn-jump {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .btn-shoot {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
 }
 
