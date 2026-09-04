@@ -526,6 +526,17 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   update() {
+    // On a short landscape phone, create() returns straight after
+    // handing off to showRevealHtml() (see isMobileReveal() above) --
+    // this.spaceKey is never set in that branch, but the scene stays
+    // active (and update() keeps getting called every frame) until
+    // Continue is tapped and something calls scene.stop() on it. Without
+    // this guard, Phaser.Input.Keyboard.JustDown(undefined) throws an
+    // uncaught exception on every single frame for as long as the mobile
+    // reveal is showing -- confirmed via a real page error
+    // ("Cannot read properties of undefined (reading '_justDown')"),
+    // not just a theoretical gap.
+    if (!this.spaceKey) return;
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.advance();
   }
 }
