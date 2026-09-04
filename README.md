@@ -171,6 +171,13 @@ same name), set up a free [Supabase](https://supabase.com) project:
 
    create policy "anyone can update progress" on progress
      for update using (true);
+
+   -- Supabase now requires an explicit grant, separate from the RLS
+   -- policies above, before a table is reachable through the API at all
+   -- (RLS controls which *rows* a role sees; this controls whether it can
+   -- touch the table in the first place). Without this the anon key gets
+   -- a permission error even though the policies look right.
+   grant select, insert, update on public.progress to anon;
    ```
 
    (Wide-open policies are fine here — this is birthday-game progress for

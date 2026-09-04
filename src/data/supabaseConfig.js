@@ -7,5 +7,5 @@
 // Leave both empty to keep progress local-only (browser localStorage,
 // keyed by name) -- the game still works fully, it just won't sync across
 // devices/browsers for the same name.
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_URL = 'https://mjqkwaitrqdltozkuhqo.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable_apmsUpkXvJUnaRXuM19ZQQ_Iw5YZWV1';
