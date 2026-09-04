@@ -3,13 +3,15 @@ import { assetUrl } from '../assetPath.js';
 import { createAmbientSparkles } from './particles.js';
 import { mixColors } from './color.js';
 
-const W = 960;
-// Canvas grew from 960x540 to 960x702 (see main.js). Every layout position
-// in this file is either a fixed offset from the top (cards, together-
-// photo card -- unaffected) or an H-relative formula (hint/dots/floor/
-// pillars/sparkle zone, all written as H-something), so the extra 162px
-// just becomes more room between the two without any other change needed.
-const H = 702;
+// Canvas is now 1280x480 (see main.js), wide-and-short to fill a landscape
+// phone screen. Most of this file's layout is either a fixed offset from
+// the top (cards, together-photo card) or a W/H-relative formula
+// (hint/dots/floor/pillars/sparkle zone), so it adapted to the new shape
+// automatically -- the one thing that didn't was the together-photo
+// card's own max size (see TOGETHER_MAX_W/H below), sized for the old
+// 702-tall canvas and too big to fit the shorter 480 one.
+const W = 1280;
+const H = 480;
 
 // A slight, consistent tilt per card (like something actually pinned up),
 // not a fresh random angle every time you revisit.
@@ -42,12 +44,13 @@ const TEXT_STYLE = {
 // cards use, not a fixed square -- fit *within* this box (aspect
 // preserved, see the 'together' branch in showCard), so portrait shots
 // end up tall and narrow, landscape ones wide and short, instead of
-// forced into one shape. This card's own vertical center (TOGETHER_CARD_Y)
-// sits lower than the other cards' (150) since it's tall enough that
-// centering on 150 would push its top off-screen.
-const TOGETHER_MAX_W = 480;
-const TOGETHER_MAX_H = 400;
-const TOGETHER_CARD_Y = 255;
+// forced into one shape. Width has plenty of room now (1280 wide canvas),
+// so the real limit is height: TOGETHER_CARD_Y plus half of
+// (TOGETHER_MAX_H + the card's own chrome) has to clear the hint text at
+// H-40 with margin, which is the tightest constraint in the whole room.
+const TOGETHER_MAX_W = 600;
+const TOGETHER_MAX_H = 300;
+const TOGETHER_CARD_Y = 200;
 
 export default class RevealRoomScene extends Phaser.Scene {
   constructor() {
@@ -71,12 +74,18 @@ export default class RevealRoomScene extends Phaser.Scene {
   }
 
   create() {
-    // No combat here regardless of how we got here (finishing a level, or a
-    // revisit from the map) -- hide HUD elements that don't apply.
-    const heartsEl = document.getElementById('hearts');
-    if (heartsEl) heartsEl.style.display = 'none';
-    const btnShoot = document.getElementById('btn-shoot');
-    if (btnShoot) btnShoot.style.display = 'none';
+    // No combat or movement here regardless of how we got here (finishing
+    // a level, or a revisit from the map) -- hide every player-only
+    // control. main.js's revisitFriend() already hides these before
+    // starting this scene for a *revisit*, but finishing a level for the
+    // first time reaches here directly from LevelScene's own
+    // this.scene.start('RevealRoomScene', ...) (see its create()),
+    // bypassing main.js entirely -- so this scene has to clear them
+    // itself too, rather than relying on whichever path got it here.
+    ['hearts', 'btn-shoot', 'touch-move', 'btn-jump'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
 
     this.drawRoom();
 

@@ -12,6 +12,18 @@
 </head>
 <body>
 
+  <!-- Shown instead of everything else when the device is in portrait --
+       landscape is the only supported orientation now (see #game-container
+       in style.css, sized specifically to fill a landscape phone screen).
+       Pure CSS (the @media (orientation: portrait) rule below), so it
+       reacts instantly to an actual rotation with no JS involved. -->
+  <div id="rotate-block" class="rotate-block">
+    <div class="stars"></div>
+    <div class="rotate-block-icon">📱</div>
+    <h1 class="pixel-title small">A Quest for<br />Akansha</h1>
+    <p class="rotate-block-message">Turn your phone sideways to play!</p>
+  </div>
+
   <div id="app">
 
     <!-- TITLE SCREEN -->

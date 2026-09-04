@@ -45,7 +45,7 @@ export function drawSkyGradient(scene, cfg, topColor, horizonColor) {
   for (let i = 0; i < bands; i++) {
     const t = i / (bands - 1);
     const color = mixInto(topColor, horizonColor, t * t); // t^2: holds the deep tone longer, warms up fast near the horizon
-    scene.add.rectangle(480, i * bandH + bandH / 2, 960, bandH + 1, color).setScrollFactor(0);
+    scene.add.rectangle(640, i * bandH + bandH / 2, 1280, bandH + 1, color).setScrollFactor(0);
   }
 }
 
@@ -62,13 +62,13 @@ function glowOrb(scene, x, y, r, color, scrollFactor) {
 // A few soft, drifting cloud blobs so the sky has some life instead of
 // being static.
 function drawClouds(scene, cfg, color, scrollFactor, count) {
-  // Spread across the initial ~960px viewport, not the (much wider) level
+  // Spread across the initial ~1280px viewport, not the (much wider) level
   // width -- with a scrollFactor this low an object barely moves as the
   // camera scrolls, so anything placed further out just never comes into
   // view. This is atmosphere, not level geometry; it doesn't need to
   // populate the whole level the way the tiled terrain below does.
   for (let i = 0; i < count; i++) {
-    const cx = rand(40, 920);
+    const cx = rand(40, 1240);
     const cy = rand(35, 120);
     const group = [];
     for (let b = 0; b < 3; b++) {

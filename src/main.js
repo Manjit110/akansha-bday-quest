@@ -221,21 +221,21 @@ function ensureGame() {
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game-container',
-    // 30% taller than the original 540 (960x540 -> 960x702). Pushing this
-    // further (960x900, briefly tried) broke the desktop/laptop experience
-    // -- that shape doesn't fit a normal wide-but-not-very-tall laptop
-    // window, so the browser shrank the whole box down, letterboxing it to
-    // ~50% width even on a real 1366x768 screen. 702 is the point where
-    // mobile portrait gets meaningfully bigger without desktop paying that
-    // cost. "Things look bigger" the rest of the way there comes from
-    // LevelScene's own camera zoom (see its create()) instead of a taller
-    // canvas -- zoom actually magnifies sprites, where more canvas height
-    // alone only reveals more world, unchanged in size.
-    // GROUND_Y and every other absolute Y-position (BossScene.js,
-    // levelConfig.js) shifted down to match; RevealRoomScene.js needed no
-    // changes since its own layout is already written in H-relative terms.
-    width: 960,
-    height: 702,
+    // Landscape is the only orientation the game runs in now (see
+    // .rotate-block in style.css/index.html, which blocks portrait
+    // outright), so this is shaped to actually fill a landscape phone
+    // screen -- 1280x480 (2.667:1), much wider-and-shorter than the old
+    // 960x540/960x702, which were both closer to desktop-monitor shapes
+    // and left a landscape phone's screen mostly empty on the sides.
+    // Every absolute position in BossScene.js/levelConfig.js was
+    // recalculated for this shape (not just shifted -- 480 is shorter
+    // than even the original 540, so it's a real re-layout, not a
+    // shift); RevealRoomScene.js's own layout is written in W/H-relative
+    // terms so most of it adapted automatically, except the
+    // together-photo card's own max size, which needed shrinking to
+    // still fit the shorter canvas.
+    width: 1280,
+    height: 480,
     backgroundColor: '#1a1035',
     physics: { default: 'arcade', arcade: { gravity: { y: 1400 }, debug: false } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },

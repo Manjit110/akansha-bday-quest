@@ -7,17 +7,17 @@ import { friends } from '../data/friends.js';
 import { assetUrl } from '../assetPath.js';
 import { playSound, playMusic, stopMusic } from '../sound.js';
 
-const W = 960;
-// Canvas grew from 960x540 to 960x702 (see main.js) -- every absolute
-// Y-position below (GROUND_Y, DRAGON_HIGH_Y, JAIL_Y, ALLY_ROW_Y_START)
-// shifted down by the same +162px, preserving every existing gap between
-// them exactly. Sizes/offsets/steps (JAIL_W, JAIL_H, WEAK_OFFSET_Y,
-// ALLY_ROW_Y_STEP) are left as-is -- they're not positions, so shifting
-// doesn't apply, and there's no player-physics reachability concern here
-// (no player-controlled character in this fight) that would call for
-// anything more than a straight shift.
-const H = 702;
-const GROUND_Y = 622;
+// Canvas is now 1280x480 (see main.js), wide-and-short to fill a landscape
+// phone screen -- W grew from 960, giving the squad's rows genuinely more
+// spread-out room (see buildAllyPositions, already W-relative); H shrank
+// from 702 (and even the original 540), so everything below the jail cell
+// is a fresh layout rather than a shift: JAIL_Y and DRAGON_HIGH_Y stay at
+// their original values (both are top-anchored, and there's still plenty
+// of headroom at 480), while GROUND_Y and the ally rows between them were
+// recalculated to actually fit in the shorter space.
+const W = 1280;
+const H = 480;
+const GROUND_Y = 410;
 
 const PALETTE = {
   ground: 0x4a3570,
@@ -44,13 +44,13 @@ const HITS_PER_STAGE_MIN = 12;
 const HITS_PER_STAGE_MAX = 14;
 // The dragon patrols this whole band horizontally at one fixed altitude --
 // it never dives or changes height, only ever moving left/right along this
-// single line -- DRAGON_HIGH_Y sits below the jail cell (JAIL_Y=246, bottom
-// ~294) so it flies past the cage rather than through it, and
+// single line -- DRAGON_HIGH_Y sits below the jail cell (JAIL_Y=84, bottom
+// ~146) so it flies past the cage rather than through it, and
 // ALLY_ROW_Y_START (below) keeps the whole rescued squad clear of its body
 // while it's cruising.
-const DRAGON_HIGH_Y = 352;
+const DRAGON_HIGH_Y = 190;
 const DRAGON_PATROL_MIN_X = 170;
-const DRAGON_PATROL_MAX_X = 790;
+const DRAGON_PATROL_MAX_X = 1110;
 const DRAGON_PATROL_SPEED = 0.18; // px/ms
 // Where the belly sits relative to the dragon container's own origin, and
 // the height the squad's shots visually converge on -- kept as one
@@ -61,8 +61,8 @@ const WEAK_OFFSET_Y = 20;
 // fight now, so it alone has to guarantee the fight always finishes.
 const ALLY_FIRE_INTERVAL = 260;
 const ALLY_PROJECTILE_DURATION = 220;
-const JAIL_X = 480;
-const JAIL_Y = 246;
+const JAIL_X = 640;
+const JAIL_Y = 84;
 const JAIL_W = 150;
 const JAIL_H = 124;
 // Each ally is the same hero figure the player controls everywhere else,
@@ -77,8 +77,8 @@ const ALLY_SCALE = 0.85;
 // a face is actually legible, same trick LevelScene uses for the player.
 const ALLY_FACE_SCALE = 2.8;
 const ALLY_ROWS = 4;
-const ALLY_ROW_Y_START = 442;
-const ALLY_ROW_Y_STEP = 42;
+const ALLY_ROW_Y_START = 260;
+const ALLY_ROW_Y_STEP = 34;
 
 // A keep-out zone around the jail cell, in the row nearest it -- an
 // evenly-spaced grid alone put one friend's slot at exactly JAIL_X, and
@@ -90,8 +90,8 @@ const JAIL_KEEPOUT_Y_MAX = JAIL_Y + JAIL_H / 2 + 30;
 // Keeps a lane clear down the middle of the arena, near the jail, so the
 // squad doesn't crowd right up against the cell -- purely a visual/layout
 // choice at this point, not tied to any dragon movement.
-const DIVE_LANE_MIN_X = 380;
-const DIVE_LANE_MAX_X = 580;
+const DIVE_LANE_MIN_X = 540;
+const DIVE_LANE_MAX_X = 740;
 const DIVE_LANE_MARGIN = 30;
 const DIVE_KEEPOUT_X_MIN = DIVE_LANE_MIN_X - DIVE_LANE_MARGIN;
 const DIVE_KEEPOUT_X_MAX = DIVE_LANE_MAX_X + DIVE_LANE_MARGIN;
