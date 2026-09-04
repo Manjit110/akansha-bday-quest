@@ -237,8 +237,9 @@ export default class RevealRoomScene extends Phaser.Scene {
     // fixed near the bottom (y=494/516) -- the old cy (H-108=432) put the
     // frame's own bottom edge and caption past both of those, so most
     // portrait photos visibly overlapped the hint text/dots. This sits
-    // higher, in the space that was actually free.
-    const cy = H - 170;
+    // higher, in the space that was actually free -- nudged up a little
+    // further still to make room for a bigger frame below.
+    const cy = H - 178;
     const togetherKey = `together-friend-${f.id}`;
     const friendColor = Phaser.Display.Color.HexStringToColor(f.color).color;
 
@@ -252,19 +253,19 @@ export default class RevealRoomScene extends Phaser.Scene {
       // vary, so most photos (portrait or landscape) end up height-
       // constrained and simply narrower or wider as their real proportions
       // call for, instead of distorted.
-      const maxW = 200;
-      const maxH = 150;
+      const maxW = 230;
+      const maxH = 172;
       const src = this.textures.get(togetherKey).source[0];
       const aspect = src.width / src.height;
       const frameW = aspect >= maxW / maxH ? maxW : maxH * aspect;
       const frameH = aspect >= maxW / maxH ? maxW / aspect : maxH;
-      const outer = this.add.rectangle(cx, cy, frameW + 10, frameH + 10, 0xffd166);
+      const outer = this.add.rectangle(cx, cy, frameW + 8, frameH + 8, 0xffd166);
       const photo = this.add.image(cx, cy, togetherKey);
       photo.setDisplaySize(frameW, frameH);
       const caption = this.add
-        .text(cx, cy + frameH / 2 + 16, `Akansha & ${f.name}`, {
+        .text(cx, cy + frameH / 2 + 13, `Akansha & ${f.name}`, {
           fontFamily: 'Quicksand, sans-serif',
-          fontSize: '12px',
+          fontSize: '11px',
           fontStyle: '700',
           color: '#c9b8e8',
         })
