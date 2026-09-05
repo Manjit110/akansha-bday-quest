@@ -266,7 +266,7 @@ export default class RevealRoomScene extends Phaser.Scene {
       { icon: '👀', label: 'First Impression', text: f.firstImpression },
       { icon: '🤝', label: 'Where We Met', text: f.firstMet },
       { icon: '😊', label: 'Impression Now', text: f.nowImpression },
-      { icon: '❤️', label: 'What She Loves About Her', text: f.quality },
+      { icon: '❤️', label: 'What You Love About Her', text: f.quality },
     ];
     // A short one-liner stays a single card; a long-form answer (some run
     // to several hundred words) splits into multiple, numbered cards

@@ -34,7 +34,7 @@ const FIELDS = [
   { icon: '👀', label: 'First Impression', key: 'firstImpression' },
   { icon: '🤝', label: 'Where We Met', key: 'firstMet' },
   { icon: '😊', label: 'Impression Now', key: 'nowImpression' },
-  { icon: '❤️', label: 'What She Loves About Her', key: 'quality' },
+  { icon: '❤️', label: 'What You Love About Her', key: 'quality' },
 ];
 
 // Populates and shows #screen-reveal with this friend's photo(s) and
